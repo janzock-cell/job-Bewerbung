@@ -1,0 +1,8 @@
+{
+  "name": "Bewerbungs-Helfer",
+  "description": "Erstellt professionelle Anschreiben aus handschriftlichen Notizen und Nutzerprofilen mithilfe von Gemini AI.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
