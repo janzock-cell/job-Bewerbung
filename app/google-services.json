@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "480527641185",
+    "project_id": "gen-lang-client-0962727698",
+    "storage_bucket": "gen-lang-client-0962727698.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:480527641185:android:816b8372d79d19233c5820",
+        "android_client_info": {
+          "package_name": "com.aistudio.bewerbungshelfer.kqdgus"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBr93edyFuudVOy9jm-BB_d9hoe_vUwiTk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

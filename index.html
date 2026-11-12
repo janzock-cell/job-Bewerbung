@@ -110,7 +110,7 @@
   </header>
 
   <!-- Main Content Container -->
-  <main class="flex-1 max-w-6xl w-full mx-auto p-4 md:p-6 no-print">
+  <main class="flex-1 max-w-6xl w-full mx-auto p-4 md:p-6">
 
     <!-- TAB 1: GENERATOR / CREATE -->
     <section id="tab-create" class="space-y-6">
@@ -221,7 +221,7 @@
 
             <!-- OCR Upload Area -->
             <div class="border-2 border-dashed border-slate-300 hover:border-indigo-400 rounded-xl p-4 text-center bg-slate-50/50 transition cursor-pointer" onclick="document.getElementById('note-file-input').click()">
-              <input type="file" id="note-file-input" accept="image/*" class="hidden" onchange="handleImageOcr(event)">
+              <input type="file" id="note-file-input" accept="image/*" class="hidden" onchange="handleImageOcr(event)" aria-label="Notiz-Foto oder Bild hochladen" title="Notiz-Foto oder Bild hochladen">
               <div id="ocr-idle" class="flex flex-col items-center justify-center py-2">
                 <i data-lucide="camera" class="w-8 h-8 text-indigo-500 mb-1"></i>
                 <span class="text-xs font-semibold text-slate-700">Foto aufnehmen oder Bild auswählen</span>
@@ -351,10 +351,10 @@
     <section id="tab-editor" class="hidden space-y-6">
 
       <!-- Action Toolbar -->
-      <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm flex flex-wrap items-center justify-between gap-3">
+      <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm flex flex-wrap items-center justify-between gap-3 no-print">
         <div class="flex items-center space-x-2">
-          <label class="text-xs font-semibold text-slate-600">Vorlage:</label>
-          <select id="template-select" onchange="updateTemplateStyle()" class="text-xs font-medium px-3 py-1.5 rounded-lg border border-slate-300 bg-white focus:ring-2 focus:ring-blue-500">
+          <label for="template-select" class="text-xs font-semibold text-slate-600">Vorlage:</label>
+          <select id="template-select" aria-label="Vorlage auswählen" onchange="updateTemplateStyle()" class="text-xs font-medium px-3 py-1.5 rounded-lg border border-slate-300 bg-white focus:ring-2 focus:ring-blue-500">
             <option value="classic">Klassisch (DIN 5008 Standard)</option>
             <option value="modern">Modern (Mit Akzentlinie)</option>
             <option value="elegant">Minimalistisch & Elegant</option>
@@ -455,7 +455,7 @@
               <br>
               <p>Über die Gelegenheit, mich Ihnen in einem persönlichen Vorstellungsgespräch vorzustellen, freue ich mich sehr.</p>
               <br>
-              <p>Mit freundlichen Grüßen,</p>
+              <p>Mit freundlichen Grüßen</p>
             </div>
           </div>
 
@@ -491,8 +491,8 @@
           <span id="vault-docs-count" class="text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-100 text-slate-700">0 Dokumente</span>
         </div>
 
-        <input type="file" id="vault-image-input" accept="image/*" class="hidden" onchange="handleVaultImageUpload(event)">
-        <input type="file" id="vault-text-input" accept=".txt,.md,text/plain,text/markdown" class="hidden" onchange="handleVaultTextFileUpload(event)">
+        <input type="file" id="vault-image-input" accept="image/*" class="hidden" onchange="handleVaultImageUpload(event)" aria-label="Dokument-Foto oder Scan hochladen" title="Dokument-Foto oder Scan hochladen">
+        <input type="file" id="vault-text-input" accept=".txt,.md,text/plain,text/markdown" class="hidden" onchange="handleVaultTextFileUpload(event)" aria-label="Textdatei für Daten-Tresor hochladen" title="Textdatei für Daten-Tresor hochladen">
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
           <button type="button" onclick="document.getElementById('vault-image-input').click()" class="px-3.5 py-2.5 rounded-xl border border-dashed border-indigo-300 bg-indigo-50/50 hover:bg-indigo-50 text-indigo-700 text-xs font-semibold flex items-center justify-center gap-2 transition">
@@ -548,50 +548,50 @@
         <form id="profile-form" onsubmit="saveProfileData(event)" class="space-y-4">
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label class="block text-xs font-medium text-slate-700 mb-1">Vorname</label>
+              <label for="prof-firstname" class="block text-xs font-medium text-slate-700 mb-1">Vorname</label>
               <input type="text" id="prof-firstname" value="Max" class="w-full text-sm px-3 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500">
             </div>
             <div>
-              <label class="block text-xs font-medium text-slate-700 mb-1">Nachname</label>
+              <label for="prof-lastname" class="block text-xs font-medium text-slate-700 mb-1">Nachname</label>
               <input type="text" id="prof-lastname" value="Mustermann" class="w-full text-sm px-3 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500">
             </div>
           </div>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label class="block text-xs font-medium text-slate-700 mb-1">E-Mail</label>
+              <label for="prof-email" class="block text-xs font-medium text-slate-700 mb-1">E-Mail</label>
               <input type="email" id="prof-email" value="max@beispiel.de" class="w-full text-sm px-3 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500">
             </div>
             <div>
-              <label class="block text-xs font-medium text-slate-700 mb-1">Telefon</label>
+              <label for="prof-phone" class="block text-xs font-medium text-slate-700 mb-1">Telefon</label>
               <input type="text" id="prof-phone" value="0170 1234567" class="w-full text-sm px-3 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500">
             </div>
           </div>
 
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div class="sm:col-span-2">
-              <label class="block text-xs font-medium text-slate-700 mb-1">Straße & Hausnummer</label>
+              <label for="prof-street" class="block text-xs font-medium text-slate-700 mb-1">Straße & Hausnummer</label>
               <input type="text" id="prof-street" value="Musterstraße 12" class="w-full text-sm px-3 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500">
             </div>
             <div>
-              <label class="block text-xs font-medium text-slate-700 mb-1">PLZ & Stadt</label>
+              <label for="prof-city" class="block text-xs font-medium text-slate-700 mb-1">PLZ & Stadt</label>
               <input type="text" id="prof-city" value="10115 Berlin" class="w-full text-sm px-3 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500">
             </div>
           </div>
 
           <div>
-            <label class="block text-xs font-medium text-slate-700 mb-1">Fähigkeiten & Qualifikationen</label>
+            <label for="prof-skills" class="block text-xs font-medium text-slate-700 mb-1">Fähigkeiten & Qualifikationen</label>
             <input type="text" id="prof-skills" value="Projektmanagement, Teamleitung, Deutsch C2, Englisch B2, CRM-Systeme" class="w-full text-sm px-3 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500">
           </div>
 
           <div>
-            <label class="block text-xs font-medium text-slate-700 mb-1">Bisherige Berufserfahrung / Werdegang</label>
+            <label for="prof-experience" class="block text-xs font-medium text-slate-700 mb-1">Bisherige Berufserfahrung / Werdegang</label>
             <textarea id="prof-experience" rows="3" class="w-full text-sm px-3 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500">2021 - heute: Projektmanager bei Beispiel AG
 2018 - 2021: Marketing Assistant bei Muster GmbH</textarea>
           </div>
 
           <div>
-            <label class="block text-xs font-medium text-slate-700 mb-1">Über mich / Persönliche Schwerpunkte</label>
+            <label for="prof-about" class="block text-xs font-medium text-slate-700 mb-1">Über mich / Persönliche Schwerpunkte</label>
             <textarea id="prof-about" rows="2" class="w-full text-sm px-3 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500">Strukturierter, lösungsorientierter Teamplayer mit Leidenschaft für digitale Transformation und Innovation.</textarea>
           </div>
 
@@ -644,7 +644,7 @@
           <i data-lucide="key" class="w-4 h-4 text-amber-500"></i>
           Gemini API-Schlüssel
         </h3>
-        <button onclick="closeApiKeyModal()" class="text-slate-400 hover:text-slate-600">
+        <button onclick="closeApiKeyModal()" class="text-slate-400 hover:text-slate-600" aria-label="Fenster schließen" title="Fenster schließen">
           <i data-lucide="x" class="w-5 h-5"></i>
         </button>
       </div>
@@ -1060,7 +1060,7 @@
 Rohtext:
 ${raw.slice(0, 8000)}`;
 
-          const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${encodeURIComponent(apiKey)}`, {
+          const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${encodeURIComponent(apiKey)}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -1249,7 +1249,7 @@ Handschriftliche Notizen & Kernmotivation: ${notes || 'Keine extra Notizen'}
 Formatierungs-Vorgaben:
 Gib NUR den Textkörper des Anschreibens zurück (beginnend mit der Anrede 'Sehr geehrte Damen und Herren,' oder spezifischer Anrede, gefolgt von Einleitung, Hauptteil, Bezug zu den Notizen/Stärken, Schlusssatz und Grußformel). Formatiere in 3 bis 4 Absätzen.`;
 
-          const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${encodeURIComponent(apiKey)}`, {
+          const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${encodeURIComponent(apiKey)}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({

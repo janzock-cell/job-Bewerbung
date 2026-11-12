@@ -52,7 +52,7 @@ class ApplicationViewModel(application: Application) : AndroidViewModel(applicat
 
     private val geminiModel by lazy {
         Firebase.ai.generativeModel(
-            modelName = "gemini-3.8-flash",
+            modelName = "gemini-2.0-flash",
             generationConfig = generationConfig {
                 temperature = 0.7f
             }
