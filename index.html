@@ -1,11 +1,13 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="de" class="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Bewerbungs-Helfer | Professionelle KI-Anschreiben</title>
   <meta name="description" content="Erstelle professionelle DIN 5008 Anschreiben aus handschriftlichen Notizen und deinem Profil mithilfe von KI.">
   <link rel="icon" type="image/png" href="app/src/main/res/drawable/app_icon_foreground.png">
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#0a0e17">
 
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -13,8 +15,47 @@
   <script src="https://unpkg.com/lucide@latest"></script>
   <!-- Tesseract.js für Handschrift-/Notizen-Texterkennung im Browser -->
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  <!-- html2pdf.js für direkten Vektor-PDF-Download -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
   <style>
+    /* DIN 5008 Blatt & Faltmarken */
+    .page-sheet {
+      width: 100%;
+      min-height: 297mm;
+      max-width: 210mm;
+      margin: 0 auto;
+      background: white;
+      color: #0f172a;
+      position: relative;
+    }
+
+    /* Faltmarke 1 (105mm), Lochmarke (148.5mm), Faltmarke 2 (210mm) */
+    .fold-mark-1 {
+      position: absolute;
+      left: 0;
+      top: 105mm;
+      width: 6mm;
+      height: 0.5px;
+      background: #94a3b8;
+    }
+    .punch-mark {
+      position: absolute;
+      left: 0;
+      top: 148.5mm;
+      width: 9mm;
+      height: 0.5px;
+      background: #64748b;
+    }
+    .fold-mark-2 {
+      position: absolute;
+      left: 0;
+      top: 210mm;
+      width: 6mm;
+      height: 0.5px;
+      background: #94a3b8;
+    }
+
     @media print {
       body * {
         visibility: hidden;
@@ -36,723 +77,697 @@
         display: none !important;
       }
     }
-
-    .page-sheet {
-      width: 100%;
-      min-height: 297mm;
-      max-width: 210mm;
-      margin: 0 auto;
-      background: white;
-    }
   </style>
 </head>
-<body class="bg-slate-50 text-slate-800 font-sans min-h-screen flex flex-col">
+<body class="bg-[#0a0e17] text-slate-100 font-sans min-h-screen flex flex-col selection:bg-blue-600 selection:text-white">
 
   <!-- Toast Banner -->
-  <div id="toast-banner" class="fixed bottom-5 right-5 z-50 hidden max-w-sm rounded-xl px-4 py-3 text-sm font-medium shadow-lg border transition-all no-print"></div>
+  <div id="toast-banner" class="fixed bottom-5 right-5 z-50 hidden max-w-sm rounded-xl px-4 py-3 text-sm font-medium shadow-2xl border transition-all no-print"></div>
 
   <!-- Top Navigation Bar -->
-  <header class="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-sm no-print">
-    <div class="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-      <div class="flex items-center space-x-3">
+  <header class="bg-[#0f172a]/90 backdrop-blur border-b border-slate-800/80 sticky top-0 z-40 shadow-sm no-print">
+    <div class="max-w-4xl mx-auto px-4 h-16 flex items-center justify-between">
+      <div class="flex items-center space-x-3 cursor-pointer" onclick="switchTab('home')">
         <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-blue-500/20">
           <i data-lucide="file-text" class="w-5 h-5"></i>
         </div>
         <div>
-          <span class="font-bold text-lg text-slate-900 tracking-tight flex items-center gap-2">
+          <span class="font-bold text-base md:text-lg text-white tracking-tight flex items-center gap-2">
             Bewerbungs-Helfer
-            <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">Web & Android</span>
+            <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">Web & Android</span>
           </span>
-          <p class="text-xs text-slate-500">Professionelle Anschreiben mit KI & Notizen-Scan</p>
+          <p class="text-[11px] text-slate-400">DIN 5008 • Notizen-Scan • Gemini AI</p>
         </div>
       </div>
 
-      <!-- Navigation Tabs -->
+      <!-- Navigation Tabs (Desktop) -->
       <nav class="hidden md:flex items-center space-x-1">
-        <button onclick="switchTab('home')" id="nav-home" class="px-3.5 py-2 rounded-lg text-sm font-medium text-blue-600 bg-blue-50 flex items-center gap-1.5 transition">
-          <i data-lucide="layout-grid" class="w-4 h-4"></i> Übersicht
+        <button onclick="switchTab('home')" id="nav-home" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-blue-400 bg-blue-500/10 border border-blue-500/20 flex items-center gap-1.5 transition">
+          <i data-lucide="layout-grid" class="w-3.5 h-3.5"></i> Übersicht
         </button>
-        <button onclick="switchTab('create')" id="nav-create" class="px-3.5 py-2 rounded-lg text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 flex items-center gap-1.5 transition">
-          <i data-lucide="pen-tool" class="w-4 h-4"></i> Generator
+        <button onclick="switchTab('vault')" id="nav-vault" class="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800 flex items-center gap-1.5 transition">
+          <i data-lucide="folder-lock" class="w-3.5 h-3.5"></i> 1. Daten-Tresor
         </button>
-        <button onclick="switchTab('editor')" id="nav-editor" class="px-3.5 py-2 rounded-lg text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 flex items-center gap-1.5 transition">
-          <i data-lucide="file-check" class="w-4 h-4"></i> Vorschau & PDF
+        <button onclick="switchTab('scan')" id="nav-scan" class="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800 flex items-center gap-1.5 transition">
+          <i data-lucide="camera" class="w-3.5 h-3.5"></i> Notizen-Scan
         </button>
-        <button onclick="switchTab('profile')" id="nav-profile" class="px-3.5 py-2 rounded-lg text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 flex items-center gap-1.5 transition">
-          <i data-lucide="folder-lock" class="w-4 h-4"></i> 1. Daten-Tresor
+        <button onclick="switchTab('editor')" id="nav-editor" class="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800 flex items-center gap-1.5 transition">
+          <i data-lucide="file-plus" class="w-3.5 h-3.5"></i> 2. Anschreiben
         </button>
-        <button onclick="switchTab('history')" id="nav-history" class="px-3.5 py-2 rounded-lg text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 flex items-center gap-1.5 transition">
-          <i data-lucide="folder" class="w-4 h-4"></i> Gespeichert
+        <button onclick="switchTab('history')" id="nav-history" class="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800 flex items-center gap-1.5 transition">
+          <i data-lucide="history" class="w-3.5 h-3.5"></i> Verlauf
         </button>
       </nav>
 
       <!-- Settings / API Key Button -->
       <div class="flex items-center space-x-2">
-        <button onclick="openApiKeyModal()" class="px-3 py-1.5 rounded-lg border border-slate-300 text-xs font-medium text-slate-700 hover:bg-slate-100 flex items-center gap-1.5 transition" title="Gemini API Key einstellen">
-          <i data-lucide="key" class="w-3.5 h-3.5 text-amber-500"></i>
+        <button onclick="openApiKeyModal()" class="px-2.5 py-1.5 rounded-lg border border-slate-700 bg-slate-800/80 text-xs font-medium text-slate-300 hover:bg-slate-700 hover:text-white flex items-center gap-1.5 transition" title="Gemini API Key einstellen">
+          <i data-lucide="key" class="w-3.5 h-3.5 text-amber-400"></i>
           <span id="api-status-text">KI-Modus: Automatisch</span>
         </button>
       </div>
     </div>
 
-    <!-- Mobile Nav Bar -->
-    <div class="md:hidden flex border-t border-slate-200 px-2 py-1 justify-around bg-white">
-      <button onclick="switchTab('home')" id="mob-home" class="flex-1 py-1.5 text-center text-xs font-medium text-blue-600 flex flex-col items-center">
-        <i data-lucide="layout-grid" class="w-4 h-4 mb-0.5"></i> Übersicht
+    <!-- Mobile Nav Bar (Bottom Dock) -->
+    <div class="md:hidden flex border-t border-slate-800/80 px-2 py-1 justify-around bg-[#0f172a]/95">
+      <button onclick="switchTab('home')" id="mob-home" class="flex-1 py-1.5 text-center text-[11px] font-medium text-blue-400 flex flex-col items-center">
+        <i data-lucide="layout-grid" class="w-4 h-4 mb-0.5"></i> Home
       </button>
-      <button onclick="switchTab('create')" id="mob-create" class="flex-1 py-1.5 text-center text-xs font-medium text-slate-600 flex flex-col items-center">
-        <i data-lucide="pen-tool" class="w-4 h-4 mb-0.5"></i> Generator
-      </button>
-      <button onclick="switchTab('editor')" id="mob-editor" class="flex-1 py-1.5 text-center text-xs font-medium text-slate-600 flex flex-col items-center">
-        <i data-lucide="file-check" class="w-4 h-4 mb-0.5"></i> Vorschau
-      </button>
-      <button onclick="switchTab('profile')" id="mob-profile" class="flex-1 py-1.5 text-center text-xs font-medium text-slate-600 flex flex-col items-center">
+      <button onclick="switchTab('vault')" id="mob-vault" class="flex-1 py-1.5 text-center text-[11px] font-medium text-slate-400 flex flex-col items-center">
         <i data-lucide="folder-lock" class="w-4 h-4 mb-0.5"></i> Tresor
       </button>
-      <button onclick="switchTab('history')" id="mob-history" class="flex-1 py-1.5 text-center text-xs font-medium text-slate-600 flex flex-col items-center">
-        <i data-lucide="folder" class="w-4 h-4 mb-0.5"></i> Archiv
+      <button onclick="switchTab('scan')" id="mob-scan" class="flex-1 py-1.5 text-center text-[11px] font-medium text-slate-400 flex flex-col items-center">
+        <i data-lucide="camera" class="w-4 h-4 mb-0.5"></i> Scan
+      </button>
+      <button onclick="switchTab('editor')" id="mob-editor" class="flex-1 py-1.5 text-center text-[11px] font-medium text-slate-400 flex flex-col items-center">
+        <i data-lucide="file-plus" class="w-4 h-4 mb-0.5"></i> Schreiben
+      </button>
+      <button onclick="switchTab('history')" id="mob-history" class="flex-1 py-1.5 text-center text-[11px] font-medium text-slate-400 flex flex-col items-center">
+        <i data-lucide="history" class="w-4 h-4 mb-0.5"></i> Verlauf
       </button>
     </div>
   </header>
 
-  <!-- Main Content Container -->
-  <main class="flex-1 max-w-6xl w-full mx-auto p-4 md:p-6">
+  <!-- Main Content Container (Mobile-Optimiert wie AI Studio Phone Frame) -->
+  <main class="flex-1 max-w-xl w-full mx-auto p-4 sm:p-6 pb-20">
 
-    <!-- TAB 0: HOME DASHBOARD (Android AI Studio Design) -->
-    <section id="tab-home" class="max-w-2xl mx-auto space-y-6">
+    <!-- ========================================== -->
+    <!-- SCREEN 0: HOME DASHBOARD                   -->
+    <!-- ========================================== -->
+    <section id="tab-home" class="space-y-5">
       <!-- Hero Banner Card -->
-      <div class="relative rounded-3xl overflow-hidden shadow-xl aspect-[16/9] sm:aspect-[21/9] flex items-end">
+      <div class="relative rounded-3xl overflow-hidden shadow-2xl aspect-[16/10] sm:aspect-[21/10] flex items-end border border-slate-800">
         <img src="hero_banner.jpg" alt="Bewerbungs-Helfer Arbeitsplatz" class="absolute inset-0 w-full h-full object-cover">
-        <div class="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/45 to-slate-950/20"></div>
-        <div class="relative z-10 p-6 sm:p-8 text-white">
-          <p class="text-sm sm:text-base font-medium text-slate-200">Willkommen beim</p>
+        <div class="absolute inset-0 bg-gradient-to-t from-[#0a0e17] via-[#0a0e17]/50 to-transparent"></div>
+        <div class="relative z-10 p-5 sm:p-6 text-white">
+          <p class="text-xs sm:text-sm font-medium text-slate-300">Willkommen beim</p>
           <h1 class="text-2xl sm:text-3xl font-black tracking-tight text-white mt-0.5">Bewerbungs-Helfer</h1>
         </div>
       </div>
 
-      <!-- 2x2 Grid Menü (Material 3 Cards aus HomeScreen.kt) -->
-      <div class="grid grid-cols-2 gap-4">
+      <!-- 2x2 Grid Menü (Material 3 Dark Cards aus HomeScreen.kt) -->
+      <div class="grid grid-cols-2 gap-3.5">
         <!-- Card 1: 1. Daten-Tresor -->
-        <button type="button" onclick="switchTab('profile')" class="group text-left p-5 sm:p-6 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white shadow-lg transition-all transform hover:-translate-y-0.5 flex flex-col justify-between aspect-square border border-slate-800/80">
-          <div class="w-12 h-12 rounded-xl bg-slate-800 group-hover:bg-blue-600/30 text-blue-400 flex items-center justify-center transition">
-            <i data-lucide="folder-lock" class="w-6 h-6"></i>
+        <button type="button" onclick="switchTab('vault')" class="group text-left p-5 rounded-2xl bg-[#141b2d] hover:bg-[#1a233b] text-white shadow-lg transition-all border border-slate-800 flex flex-col justify-between aspect-square">
+          <div class="w-11 h-11 rounded-xl bg-slate-800/80 group-hover:bg-blue-600/20 text-blue-400 flex items-center justify-center transition">
+            <i data-lucide="folder-lock" class="w-5 h-5"></i>
           </div>
           <div>
-            <h2 class="text-sm sm:text-base font-bold text-white">1. Daten-Tresor</h2>
-            <p class="text-xs text-slate-400 mt-1 leading-snug">Schritt 1: Profil, Fotos &amp; PDFs festhalten</p>
+            <h2 class="text-sm font-bold text-white">1. Daten-Tresor</h2>
+            <p class="text-[11px] text-slate-400 mt-1 leading-snug">Schritt 1: Profil, Fotos &amp; PDFs festhalten</p>
           </div>
         </button>
 
         <!-- Card 2: Notizen-Scan -->
-        <button type="button" onclick="openScanDirectly()" class="group text-left p-5 sm:p-6 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white shadow-lg transition-all transform hover:-translate-y-0.5 flex flex-col justify-between aspect-square border border-slate-800/80">
-          <div class="w-12 h-12 rounded-xl bg-slate-800 group-hover:bg-indigo-600/30 text-indigo-400 flex items-center justify-center transition">
-            <i data-lucide="scan-text" class="w-6 h-6"></i>
+        <button type="button" onclick="switchTab('scan')" class="group text-left p-5 rounded-2xl bg-[#141b2d] hover:bg-[#1a233b] text-white shadow-lg transition-all border border-slate-800 flex flex-col justify-between aspect-square">
+          <div class="w-11 h-11 rounded-xl bg-slate-800/80 group-hover:bg-indigo-600/20 text-indigo-400 flex items-center justify-center transition">
+            <i data-lucide="camera" class="w-5 h-5"></i>
           </div>
           <div>
-            <h2 class="text-sm sm:text-base font-bold text-white">Notizen-Scan</h2>
-            <p class="text-xs text-slate-400 mt-1 leading-snug">Handschriftliche Notizen digitalisieren</p>
+            <h2 class="text-sm font-bold text-white">Notizen-Scan</h2>
+            <p class="text-[11px] text-slate-400 mt-1 leading-snug">Handschriftliche Notizen digitalisieren</p>
           </div>
         </button>
 
         <!-- Card 3: 2. Anschreiben -->
-        <button type="button" onclick="openGeneratorDirectly()" class="group text-left p-5 sm:p-6 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white shadow-lg transition-all transform hover:-translate-y-0.5 flex flex-col justify-between aspect-square border border-slate-800/80">
-          <div class="w-12 h-12 rounded-xl bg-slate-800 group-hover:bg-emerald-600/30 text-emerald-400 flex items-center justify-center transition">
-            <i data-lucide="file-plus" class="w-6 h-6"></i>
+        <button type="button" onclick="openGeneratorStep(1)" class="group text-left p-5 rounded-2xl bg-[#141b2d] hover:bg-[#1a233b] text-white shadow-lg transition-all border border-slate-800 flex flex-col justify-between aspect-square">
+          <div class="w-11 h-11 rounded-xl bg-slate-800/80 group-hover:bg-emerald-600/20 text-emerald-400 flex items-center justify-center transition">
+            <i data-lucide="file-plus" class="w-5 h-5"></i>
           </div>
           <div>
-            <h2 class="text-sm sm:text-base font-bold text-white">2. Anschreiben</h2>
-            <p class="text-xs text-slate-400 mt-1 leading-snug">Schritt 2: KI-Anschreiben erstellen</p>
+            <h2 class="text-sm font-bold text-white">2. Anschreiben</h2>
+            <p class="text-[11px] text-slate-400 mt-1 leading-snug">Schritt 2: KI-Anschreiben erstellen</p>
           </div>
         </button>
 
         <!-- Card 4: Verlauf -->
-        <button type="button" onclick="switchTab('history')" class="group text-left p-5 sm:p-6 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white shadow-lg transition-all transform hover:-translate-y-0.5 flex flex-col justify-between aspect-square border border-slate-800/80">
-          <div class="w-12 h-12 rounded-xl bg-slate-800 group-hover:bg-amber-600/30 text-amber-400 flex items-center justify-center transition">
-            <i data-lucide="history" class="w-6 h-6"></i>
+        <button type="button" onclick="switchTab('history')" class="group text-left p-5 rounded-2xl bg-[#141b2d] hover:bg-[#1a233b] text-white shadow-lg transition-all border border-slate-800 flex flex-col justify-between aspect-square">
+          <div class="w-11 h-11 rounded-xl bg-slate-800/80 group-hover:bg-amber-600/20 text-amber-400 flex items-center justify-center transition">
+            <i data-lucide="history" class="w-5 h-5"></i>
           </div>
           <div>
-            <h2 class="text-sm sm:text-base font-bold text-white">Verlauf</h2>
-            <p class="text-xs text-slate-400 mt-1 leading-snug">Deine bisherigen Anschreiben</p>
+            <h2 class="text-sm font-bold text-white">Verlauf</h2>
+            <p class="text-[11px] text-slate-400 mt-1 leading-snug">Deine bisherigen Anschreiben</p>
           </div>
         </button>
       </div>
     </section>
 
-    <!-- TAB 1: GENERATOR / CREATE -->
-    <section id="tab-create" class="hidden space-y-6">
-      <div class="flex items-center justify-between no-print">
-        <button type="button" onclick="switchTab('home')" class="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 px-3 py-1.5 rounded-lg bg-white border border-slate-200 hover:bg-slate-50 transition">
-          <i data-lucide="arrow-left" class="w-4 h-4"></i>
-          <span>Zurück zur Übersicht</span>
+    <!-- ========================================== -->
+    <!-- SCREEN 1: MEIN DATEN-TRESOR (Wie Bild 1)    -->
+    <!-- ========================================== -->
+    <section id="tab-vault" class="hidden space-y-4">
+      <!-- Top Title with Back Arrow -->
+      <div class="flex items-center gap-3 py-1">
+        <button type="button" onclick="switchTab('home')" class="p-2 -ml-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition" aria-label="Zurück zur Übersicht" title="Zurück zur Übersicht">
+          <i data-lucide="arrow-left" class="w-5 h-5"></i>
         </button>
+        <h2 class="text-lg font-bold text-white">Mein Daten-Tresor</h2>
       </div>
 
-      <!-- Hero Banner Card -->
-      <div class="bg-gradient-to-r from-blue-700 via-indigo-700 to-blue-800 rounded-2xl p-6 md:p-8 text-white shadow-xl shadow-blue-900/10 relative overflow-hidden">
-        <div class="relative z-10 max-w-2xl">
-          <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-white/20 backdrop-blur text-white mb-3">
-            <i data-lucide="sparkles" class="w-3.5 h-3.5"></i> Gemini KI & OCR Handschrifterkennung
-          </span>
-          <h1 class="text-2xl md:text-3xl font-extrabold tracking-tight mb-2">Aus Notizen zum fertigen Anschreiben</h1>
-          <p class="text-blue-100 text-sm md:text-base leading-relaxed">
-            Fotografiere deine handschriftlichen Gedanken oder gib Stichpunkte ein. Die KI verknüpft dein Profil, deine Stärken und die Stellenanzeige zu einem maßgeschneiderten, formalen Bewerbungsschreiben.
-          </p>
-        </div>
-      </div>
-
-      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-
-        <!-- Left Column: 3-Phase Wizard (7 Cols) -->
-        <div class="lg:col-span-7 space-y-5">
-
-          <!-- Wizard Stepper Header -->
-          <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm space-y-3">
-            <div class="flex items-center justify-between text-xs">
-              <span id="wizard-step-label" class="font-bold text-blue-700">Schritt 1 von 3: Jobdaten &amp; Empfänger</span>
-              <span id="wizard-progress-text" class="text-slate-500 font-medium">33 %</span>
-            </div>
-            <div class="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-              <div id="wizard-progress-bar" class="h-full w-1/3 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-full transition-all duration-300"></div>
-            </div>
-            <div class="grid grid-cols-3 gap-2 pt-1">
-              <button type="button" onclick="setWizardStep(1)" id="wiz-chip-1" class="px-2.5 py-2 rounded-lg text-xs font-semibold border bg-blue-50 text-blue-700 border-blue-200 flex items-center justify-center gap-1.5 transition">
-                <span>1. Jobdaten</span>
-              </button>
-              <button type="button" onclick="setWizardStep(2)" id="wiz-chip-2" class="px-2.5 py-2 rounded-lg text-xs font-medium border bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100 flex items-center justify-center gap-1.5 transition">
-                <span>2. Notizen / Scan</span>
-              </button>
-              <button type="button" onclick="setWizardStep(3)" id="wiz-chip-3" class="px-2.5 py-2 rounded-lg text-xs font-medium border bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100 flex items-center justify-center gap-1.5 transition">
-                <span>3. KI-Generierung</span>
-              </button>
-            </div>
+      <!-- Schritt 1 Upload Card (Dark Mode mit bläulichem Glow) -->
+      <div class="bg-[#141b2d] rounded-2xl p-4 sm:p-5 border border-slate-800 space-y-3.5 shadow-xl">
+        <div class="flex items-start gap-3">
+          <div class="w-9 h-9 rounded-xl bg-blue-600/20 text-blue-400 flex items-center justify-center shrink-0">
+            <i data-lucide="cloud-upload" class="w-5 h-5"></i>
           </div>
-
-          <!-- PHASE 1: Jobdaten & Empfänger -->
-          <div id="wizard-step-1" class="bg-white rounded-xl border border-slate-200 p-5 shadow-sm space-y-4">
-            <div class="flex items-center justify-between">
-              <h2 class="font-bold text-slate-900 flex items-center gap-2">
-                <i data-lucide="briefcase" class="w-4 h-4 text-blue-600"></i>
-                Phase 1: Stellenanzeige &amp; DIN 5008 Empfänger
-              </h2>
-            </div>
-
-            <div class="space-y-3">
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label class="block text-xs font-medium text-slate-600 mb-1">Berufsbezeichnung / Stelle</label>
-                  <input type="text" id="job-title" oninput="syncJobPreview()" placeholder="z. B. Projektmanager Marketing" class="w-full text-sm px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                </div>
-                <div>
-                  <label class="block text-xs font-medium text-slate-600 mb-1">Unternehmen</label>
-                  <input type="text" id="job-company" oninput="syncJobPreview()" placeholder="z. B. Musterfirma GmbH" class="w-full text-sm px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                </div>
-              </div>
-
-              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
-                <div>
-                  <label class="block text-xs font-medium text-slate-600 mb-1">Ansprechpartner (optional)</label>
-                  <input type="text" id="job-recipient-person" oninput="syncJobPreview()" placeholder="z. B. Personalabteilung" class="w-full text-sm px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                </div>
-                <div>
-                  <label class="block text-xs font-medium text-slate-600 mb-1">Straße &amp; Hausnr. (optional)</label>
-                  <input type="text" id="job-recipient-street" oninput="syncJobPreview()" placeholder="z. B. Hauptstraße 100" class="w-full text-sm px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                </div>
-                <div>
-                  <label class="block text-xs font-medium text-slate-600 mb-1">PLZ &amp; Ort (optional)</label>
-                  <input type="text" id="job-recipient-city" oninput="syncJobPreview()" placeholder="z. B. 10117 Berlin" class="w-full text-sm px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                </div>
-              </div>
-
-              <div>
-                <label class="block text-xs font-medium text-slate-600 mb-1">Anzeigentext / Kernanforderungen</label>
-                <textarea id="job-description" rows="4" placeholder="Kopiere die wichtigsten Aufgaben und Anforderungen der Stellenanzeige hier hinein..." class="w-full text-sm px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
-              </div>
-            </div>
-
-            <div class="pt-2 flex justify-end border-t border-slate-100">
-              <button type="button" onclick="setWizardStep(2)" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg flex items-center gap-1.5 transition">
-                <span>Weiter zu Phase 2: Notizen / Scan</span>
-                <i data-lucide="arrow-right" class="w-4 h-4"></i>
-              </button>
-            </div>
-          </div>
-
-          <!-- PHASE 2: Notizen / OCR Scan -->
-          <div id="wizard-step-2" class="hidden bg-white rounded-xl border border-slate-200 p-5 shadow-sm space-y-4">
-            <div class="flex items-center justify-between">
-              <h2 class="font-bold text-slate-900 flex items-center gap-2">
-                <i data-lucide="scan-text" class="w-4 h-4 text-indigo-600"></i>
-                Phase 2: Handschriftliche Notizen &amp; Scan
-              </h2>
-              <span class="text-xs text-slate-500">Foto oder Text</span>
-            </div>
-
-            <p class="text-xs text-slate-600">
-              Lade ein Foto deiner Notizen hoch (z. B. vom Notizblock) oder trage deine persönlichen Argumente direkt ein.
+          <div>
+            <h3 class="text-sm font-bold text-white">Schritt 1: Unterlagen &amp; Notizen hochladen</h3>
+            <p class="text-xs text-slate-400 mt-0.5 leading-relaxed">
+              Fotos (z. B. alte Anschreiben/Notizen), PDFs oder Text einlesen – die KI übernimmt deine Daten automatisch.
             </p>
-
-            <!-- OCR Upload Area -->
-            <div class="border-2 border-dashed border-slate-300 hover:border-indigo-400 rounded-xl p-4 text-center bg-slate-50/50 transition cursor-pointer" onclick="document.getElementById('note-file-input').click()">
-              <input type="file" id="note-file-input" accept="image/*" class="hidden" onchange="handleImageOcr(event)" aria-label="Notiz-Foto oder Bild hochladen" title="Notiz-Foto oder Bild hochladen">
-              <div id="ocr-idle" class="flex flex-col items-center justify-center py-2">
-                <i data-lucide="camera" class="w-8 h-8 text-indigo-500 mb-1"></i>
-                <span class="text-xs font-semibold text-slate-700">Foto aufnehmen oder Bild auswählen</span>
-                <span class="text-[11px] text-slate-500">Texterkennung (Tesseract.js) startet automatisch</span>
-              </div>
-
-              <div id="ocr-loading" class="hidden flex-col items-center justify-center py-2">
-                <div class="animate-spin rounded-full h-7 w-7 border-b-2 border-indigo-600 mb-2"></div>
-                <span class="text-xs font-semibold text-indigo-700" id="ocr-status">Notizen werden analysiert…</span>
-              </div>
-            </div>
-
-            <!-- Textfeld für erkannte/manuelle Notizen -->
-            <div>
-              <div class="flex items-center justify-between mb-1">
-                <label class="text-xs font-medium text-slate-600">Erkannte Stichpunkte &amp; Motivation:</label>
-                <button type="button" onclick="clearNotes()" class="text-xs text-red-500 hover:underline">Löschen</button>
-              </div>
-              <textarea id="notes-text" rows="4" placeholder="z. B. Warum ich wechseln möchte: mehr Verantwortung, 4 Jahre Erfahrung mit agilem Projektmanagement, kenne die Branche gut..." class="w-full text-sm px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
-            </div>
-
-            <div class="pt-2 flex items-center justify-between border-t border-slate-100">
-              <button type="button" onclick="setWizardStep(1)" class="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg flex items-center gap-1.5 transition">
-                <i data-lucide="arrow-left" class="w-4 h-4"></i>
-                <span>Zurück</span>
-              </button>
-              <button type="button" onclick="setWizardStep(3)" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg flex items-center gap-1.5 transition">
-                <span>Weiter zu Phase 3: KI-Generierung</span>
-                <i data-lucide="arrow-right" class="w-4 h-4"></i>
-              </button>
-            </div>
-          </div>
-
-          <!-- PHASE 3: KI-Generierung -->
-          <div id="wizard-step-3" class="hidden bg-white rounded-xl border border-slate-200 p-5 shadow-sm space-y-4">
-            <div class="flex items-center justify-between">
-              <h2 class="font-bold text-slate-900 flex items-center gap-2">
-                <i data-lucide="sparkles" class="w-4 h-4 text-blue-600"></i>
-                Phase 3: KI-Generierung &amp; Optimierung
-              </h2>
-            </div>
-
-            <!-- Summary Box -->
-            <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-1.5 text-slate-700">
-              <p><span class="font-semibold text-slate-900">Position &amp; Firma:</span> <span id="wiz-summary-job">Projektmanager Marketing bei Musterfirma GmbH</span></p>
-              <p><span class="font-semibold text-slate-900">Notizen:</span> <span id="wiz-summary-notes">Keine zusätzlichen Notizen eingetragen</span></p>
-              <p><span class="font-semibold text-slate-900">Daten-Tresor:</span> <span id="wiz-summary-vault">0 hinterlegte Dokumente</span></p>
-            </div>
-
-            <!-- Optional: Bestehendes Anschreiben zum Optimieren -->
-            <div>
-              <label class="block text-xs font-medium text-slate-700 mb-1 flex items-center gap-1.5">
-                <i data-lucide="wand-2" class="w-3.5 h-3.5 text-indigo-600"></i>
-                Bestehendes Anschreiben optimieren (optional)
-              </label>
-              <textarea id="existing-letter-text" rows="4" placeholder="Füge hier optional einen vorhandenen Entwurf ein, um ihn gezielt zu verbessern…" class="w-full text-sm px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
-            </div>
-
-            <!-- Generate Actions -->
-            <div class="flex flex-col sm:flex-row gap-3">
-              <button type="button" onclick="generateCoverLetter(false)" id="btn-generate" class="flex-1 py-3 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold rounded-xl shadow-md shadow-blue-500/20 flex items-center justify-center gap-2 transition">
-                <i data-lucide="sparkles" class="w-5 h-5"></i>
-                <span>Anschreiben mit KI generieren</span>
-              </button>
-              <button type="button" onclick="generateCoverLetter(true)" id="btn-improve" class="py-3 px-4 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-semibold rounded-xl flex items-center justify-center gap-2 transition">
-                <i data-lucide="wand-2" class="w-4 h-4 text-indigo-600"></i>
-                <span>Bestehendes optimieren</span>
-              </button>
-            </div>
-
-            <div class="pt-2 flex items-center justify-between border-t border-slate-100">
-              <button type="button" onclick="setWizardStep(2)" class="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg flex items-center gap-1.5 transition">
-                <i data-lucide="arrow-left" class="w-4 h-4"></i>
-                <span>Zurück zu Phase 2</span>
-              </button>
-            </div>
-          </div>
-
-        </div>
-
-        <!-- Right Column: Profile & Vault Overview (5 Cols) -->
-        <div class="lg:col-span-5 space-y-6">
-
-          <!-- Profile Quick-Card -->
-          <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
-            <div class="flex items-center justify-between mb-3">
-              <h3 class="font-bold text-slate-900 flex items-center gap-2">
-                <i data-lucide="user-check" class="w-4 h-4 text-emerald-600"></i>
-                Bewerberprofil &amp; Daten-Tresor
-              </h3>
-              <button onclick="switchTab('profile')" class="text-xs text-blue-600 hover:underline font-medium">Daten-Tresor öffnen</button>
-            </div>
-
-            <div id="profile-summary" class="space-y-2 text-sm text-slate-600">
-              <div class="p-3 bg-slate-50 rounded-lg">
-                <p class="font-semibold text-slate-900" id="sum-name">Max Mustermann</p>
-                <p class="text-xs text-slate-500" id="sum-contact">max@beispiel.de | 0170 1234567</p>
-                <p class="text-xs text-slate-500" id="sum-address">Musterstraße 12, 10115 Berlin</p>
-              </div>
-              <div class="text-xs space-y-1">
-                <p><span class="font-medium text-slate-700">Fähigkeiten:</span> <span id="sum-skills">Projektmanagement, Teamleitung, Deutsch C2</span></p>
-                <p><span class="font-medium text-slate-700">Erfahrung:</span> <span id="sum-exp">5 Jahre Marketing bei Beispiel AG</span></p>
-                <p><span class="font-medium text-slate-700">Tresor-Dokumente:</span> <span id="sum-vault-docs">0 Dokumente gespeichert</span></p>
-              </div>
-            </div>
-          </div>
-
-          <!-- Feature / Info Card -->
-          <div class="bg-indigo-50/70 border border-indigo-200/60 rounded-xl p-5 space-y-3">
-            <h4 class="font-semibold text-indigo-900 text-sm flex items-center gap-1.5">
-              <i data-lucide="check-circle-2" class="w-4 h-4 text-indigo-600"></i>
-              Highlights dieser Version
-            </h4>
-            <ul class="text-xs text-indigo-950/80 space-y-1.5 list-disc list-inside">
-              <li>DIN 5008 normgerechter Briefkopf für deutsche Bewerbungen</li>
-              <li>Handschrifterkennung direkt im Webbrowser</li>
-              <li>Sofortiger PDF-Download oder druckfertige Ansicht</li>
-              <li>Synchronisiert mit Android App Codebase</li>
-            </ul>
           </div>
         </div>
-      </div>
-    </section>
 
-
-    <!-- TAB 2: EDITOR & DIN A4 VORSCHAU -->
-    <section id="tab-editor" class="hidden space-y-6">
-      <div class="flex items-center justify-between no-print">
-        <button type="button" onclick="switchTab('home')" class="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 px-3 py-1.5 rounded-lg bg-white border border-slate-200 hover:bg-slate-50 transition">
-          <i data-lucide="arrow-left" class="w-4 h-4"></i>
-          <span>Zurück zur Übersicht</span>
-        </button>
-      </div>
-
-      <!-- Action Toolbar -->
-      <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm flex flex-wrap items-center justify-between gap-3 no-print">
-        <div class="flex items-center space-x-2">
-          <label for="template-select" class="text-xs font-semibold text-slate-600">Vorlage:</label>
-          <select id="template-select" aria-label="Vorlage auswählen" onchange="updateTemplateStyle()" class="text-xs font-medium px-3 py-1.5 rounded-lg border border-slate-300 bg-white focus:ring-2 focus:ring-blue-500">
-            <option value="classic">Klassisch (DIN 5008 Standard)</option>
-            <option value="modern">Modern (Mit Akzentlinie)</option>
-            <option value="elegant">Minimalistisch & Elegant</option>
-          </select>
-        </div>
-
-        <div class="flex items-center space-x-2">
-          <button onclick="copyToClipboard()" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium rounded-lg flex items-center gap-1.5 transition">
-            <i data-lucide="copy" class="w-3.5 h-3.5"></i> Text kopieren
+        <!-- 3 Upload Pill Buttons (Kamera, Foto, PDF/Datei) -->
+        <div class="grid grid-cols-3 gap-2 pt-1">
+          <button type="button" onclick="document.getElementById('vault-camera-input').click()" class="py-2.5 px-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-medium flex items-center justify-center gap-1.5 border border-slate-700 transition">
+            <i data-lucide="camera" class="w-3.5 h-3.5 text-blue-400"></i>
+            <span>Kamera</span>
           </button>
-          <button onclick="saveCurrentLetter()" class="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs font-medium rounded-lg flex items-center gap-1.5 transition">
-            <i data-lucide="save" class="w-3.5 h-3.5"></i> Speichern
+          <button type="button" onclick="document.getElementById('vault-photo-input').click()" class="py-2.5 px-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-medium flex items-center justify-center gap-1.5 border border-slate-700 transition">
+            <i data-lucide="image" class="w-3.5 h-3.5 text-indigo-400"></i>
+            <span>Foto</span>
           </button>
-          <button onclick="window.print()" class="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg shadow-sm flex items-center gap-1.5 transition">
-            <i data-lucide="printer" class="w-3.5 h-3.5"></i> Als PDF drucken / exportieren
-          </button>
-        </div>
-      </div>
-
-      <!-- Anlagen Editor Card (.no-print) -->
-      <div class="bg-white rounded-xl border border-slate-200 p-4 md:p-5 shadow-sm no-print space-y-4">
-        <div class="flex flex-wrap items-start justify-between gap-2">
-          <div>
-            <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
-              <i data-lucide="paperclip" class="w-4 h-4 text-blue-600"></i>
-              Anlagen anpassen
-            </h3>
-            <p class="text-xs text-slate-500 mt-0.5">Lege fest, welche Unterlagen (z. B. Lebenslauf, Zeugnisse) am Briefende aufgeführt werden.</p>
-          </div>
-          <span id="attachments-count-badge" class="text-xs font-semibold px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-100">2 ausgewählt</span>
-        </div>
-
-        <!-- Aktive Anlagen Liste -->
-        <div id="attachments-list-container" class="space-y-2"></div>
-
-        <!-- Neue Anlage hinzufügen -->
-        <div class="flex flex-col sm:flex-row gap-2">
-          <input
-            type="text"
-            id="new-attachment-input"
-            placeholder="z. B. Aktueller Lebenslauf, Zertifikat..."
-            onkeydown="if(event.key==='Enter'){event.preventDefault();addCustomAttachment();}"
-            class="flex-1 text-sm px-3 py-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-          <button type="button" onclick="addCustomAttachment()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 transition">
-            <i data-lucide="plus" class="w-4 h-4"></i> Hinzufügen
+          <button type="button" onclick="document.getElementById('vault-file-input').click()" class="py-2.5 px-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-medium flex items-center justify-center gap-1.5 border border-slate-700 transition">
+            <i data-lucide="file-text" class="w-3.5 h-3.5 text-emerald-400"></i>
+            <span>PDF / Datei</span>
           </button>
         </div>
 
-        <!-- Schnellauswahl -->
+        <!-- Hidden File Inputs -->
+        <input type="file" id="vault-camera-input" accept="image/*" capture="environment" class="hidden" onchange="handleVaultUpload(event, 'Kamera')" aria-label="Kamera-Foto aufnehmen" title="Kamera-Foto aufnehmen">
+        <input type="file" id="vault-photo-input" accept="image/*" class="hidden" onchange="handleVaultUpload(event, 'Foto')" aria-label="Bild aus Galerie auswählen" title="Bild aus Galerie auswählen">
+        <input type="file" id="vault-file-input" accept=".pdf,.txt,.md,text/plain" class="hidden" onchange="handleVaultUpload(event, 'PDF/Datei')" aria-label="PDF oder Textdatei hochladen" title="PDF oder Textdatei hochladen">
+
+        <!-- OCR / Processing Status Indicator -->
+        <div id="vault-status-indicator" class="hidden items-center gap-2 p-2.5 bg-blue-950/60 border border-blue-800/80 rounded-xl text-xs text-blue-200">
+          <div class="animate-spin rounded-full h-4 w-4 border-2 border-blue-400 border-t-transparent"></div>
+          <span id="vault-status-text">Lese Dokument ein…</span>
+        </div>
+
+        <!-- Bezeichnung Input -->
         <div>
-          <p class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-2">Schnellauswahl</p>
-          <div id="attachment-suggestions" class="flex flex-wrap gap-1.5"></div>
-        </div>
-      </div>
-
-      <!-- DIN A4 Preview Page Container -->
-      <div class="bg-slate-200/70 p-4 md:p-8 rounded-2xl flex justify-center overflow-x-auto">
-        <div id="print-letter" class="page-sheet bg-white p-10 md:p-14 shadow-lg rounded-sm text-slate-900 border border-slate-200 relative text-sm leading-relaxed">
-
-          <!-- Header / Absender -->
-          <div class="border-b pb-4 mb-6" id="letter-header-container">
-            <div class="flex justify-between items-start">
-              <div>
-                <h1 id="preview-sender-name" class="text-xl font-bold text-slate-900">Max Mustermann</h1>
-                <p id="preview-sender-address" class="text-xs text-slate-600">Musterstraße 12 • 10115 Berlin</p>
-                <p id="preview-sender-contact" class="text-xs text-slate-600">E-Mail: max@beispiel.de • Tel: 0170 1234567</p>
-              </div>
-              <div class="text-right text-xs text-slate-500">
-                <span id="preview-date"></span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Empfänger-Adresse -->
-          <div class="mb-8 text-xs text-slate-700 leading-normal max-w-xs">
-            <p class="text-[10px] text-slate-400 mb-1 border-b pb-0.5" id="preview-mini-sender">Max Mustermann • Musterstraße 12 • 10115 Berlin</p>
-            <p id="preview-recipient-company" class="font-semibold text-slate-800" contenteditable="true">Musterfirma GmbH</p>
-            <p id="preview-recipient-person" contenteditable="true">Personalabteilung</p>
-            <p id="preview-recipient-address" contenteditable="true">Hauptstraße 100</p>
-            <p id="preview-recipient-city" contenteditable="true">10117 Berlin</p>
-          </div>
-
-          <!-- Betreffzeile -->
-          <div class="mb-6">
-            <h2 id="preview-subject" class="font-bold text-base text-slate-900" contenteditable="true">Bewerbung als Projektmanager Marketing</h2>
-            <p id="preview-ref" class="text-xs text-slate-500 mt-0.5" contenteditable="true">Referenz / Bezug: Ihre Stellenausschreibung</p>
-          </div>
-
-          <!-- Anschreiben Fließtext (Direkt editierbar) -->
-          <div class="mb-8 text-justify text-slate-800 leading-relaxed space-y-4">
-            <div id="preview-body" contenteditable="true" class="focus:outline-none focus:ring-1 focus:ring-blue-400 p-2 -m-2 rounded">
-              <p>Sehr geehrte Damen und Herren,</p>
-              <br>
-              <p>mit großem Interesse habe ich Ihre Stellenausschreibung gelesen. Auf Basis meiner bisherigen beruflichen Erfahrungen sowie meines fundierten Profils möchte ich mich Ihnen als engagierter und verlässlicher Mitarbeiter vorstellen.</p>
-              <br>
-              <p>In meinen bisherigen Stationen konnte ich wertvolle Praxiserfahrungen sammeln und meine Kenntnisse gezielt vertiefen. Zu meinen Stärken zählen eine strukturierte Arbeitsweise, ausgeprägte Teamfähigkeit sowie die Motivation, komplexe Herausforderungen eigenständig und zielorientiert zu lösen.</p>
-              <br>
-              <p>Über die Gelegenheit, mich Ihnen in einem persönlichen Vorstellungsgespräch vorzustellen, freue ich mich sehr.</p>
-              <br>
-              <p>Mit freundlichen Grüßen</p>
-            </div>
-          </div>
-
-          <!-- Grußformel & Name -->
-          <div class="mt-8 pt-4">
-            <p id="preview-sign-name" class="font-semibold text-slate-900">Max Mustermann</p>
-            <p id="preview-attachments" class="text-xs text-slate-500 mt-4">Anlagen: Lebenslauf, Zeugnisse</p>
-          </div>
-
-        </div>
-      </div>
-    </section>
-
-
-    <!-- TAB 3: 1. DATEN-TRESOR & BENUTZERPROFIL -->
-    <section id="tab-profile" class="hidden space-y-6 max-w-3xl mx-auto">
-      <div class="flex items-center justify-between no-print">
-        <button type="button" onclick="switchTab('home')" class="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 px-3 py-1.5 rounded-lg bg-white border border-slate-200 hover:bg-slate-50 transition">
-          <i data-lucide="arrow-left" class="w-4 h-4"></i>
-          <span>Zurück zur Übersicht</span>
-        </button>
-      </div>
-
-      <!-- Schritt 1: Smart-Import & Dokumenten-Tresor -->
-      <div class="bg-white rounded-xl border border-blue-200/80 p-6 shadow-sm space-y-4">
-        <div class="flex flex-wrap items-start justify-between gap-2">
-          <div>
-            <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200 mb-1.5">
-              Schritt 1
-            </span>
-            <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
-              <i data-lucide="folder-lock" class="w-5 h-5 text-blue-600"></i>
-              Daten-Tresor &amp; Smart-Import
-            </h2>
-            <p class="text-xs text-slate-500 mt-0.5">
-              Lade Fotos (z. B. alte Anschreiben, Lebenslauf, Zeugnisse), .txt/.md-Dateien oder eigene Notizen hoch. Gespeicherte Dokumente stehen bei der Anschreiben-Erstellung bereit.
-            </p>
-          </div>
-          <span id="vault-docs-count" class="text-xs font-semibold px-2.5 py-1 rounded-full bg-slate-100 text-slate-700">0 Dokumente</span>
+          <label for="vault-doc-title" class="sr-only">Bezeichnung</label>
+          <input type="text" id="vault-doc-title" placeholder="Bezeichnung (optional)" class="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl bg-[#0b0f19] border border-slate-800 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500">
         </div>
 
-        <input type="file" id="vault-image-input" accept="image/*" class="hidden" onchange="handleVaultImageUpload(event)" aria-label="Dokument-Foto oder Scan hochladen" title="Dokument-Foto oder Scan hochladen">
-        <input type="file" id="vault-text-input" accept=".txt,.md,text/plain,text/markdown" class="hidden" onchange="handleVaultTextFileUpload(event)" aria-label="Textdatei für Daten-Tresor hochladen" title="Textdatei für Daten-Tresor hochladen">
+        <!-- Text Input -->
+        <div>
+          <label for="vault-raw-text" class="sr-only">Text aus Dokumenten / Notizen</label>
+          <textarea id="vault-raw-text" rows="3" placeholder="Text aus Dokumenten / Notizen" class="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl bg-[#0b0f19] border border-slate-800 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+        </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-          <button type="button" onclick="document.getElementById('vault-image-input').click()" class="px-3.5 py-2.5 rounded-xl border border-dashed border-indigo-300 bg-indigo-50/50 hover:bg-indigo-50 text-indigo-700 text-xs font-semibold flex items-center justify-center gap-2 transition">
-            <i data-lucide="camera" class="w-4 h-4"></i>
-            <span>Foto per OCR einlesen</span>
+        <!-- Submit Button -->
+        <div class="flex gap-2 pt-1">
+          <button type="button" onclick="saveVaultDocumentOnly()" class="py-2.5 px-3 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-semibold border border-slate-700 transition">
+            Speichern
           </button>
-          <button type="button" onclick="document.getElementById('vault-text-input').click()" class="px-3.5 py-2.5 rounded-xl border border-dashed border-blue-300 bg-blue-50/50 hover:bg-blue-50 text-blue-700 text-xs font-semibold flex items-center justify-center gap-2 transition">
-            <i data-lucide="file-text" class="w-4 h-4"></i>
-            <span>Textdatei (.txt / .md) laden</span>
-          </button>
-        </div>
-
-        <div id="vault-ocr-status-box" class="hidden items-center gap-2 px-3 py-2 rounded-lg bg-indigo-50 text-indigo-700 text-xs font-medium">
-          <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-indigo-600"></div>
-          <span id="vault-ocr-status">Bild wird per OCR eingelesen…</span>
-        </div>
-
-        <div class="space-y-3">
-          <div>
-            <label class="block text-xs font-medium text-slate-700 mb-1">Dokument-Titel (optional)</label>
-            <input type="text" id="vault-doc-title" placeholder="z. B. Lebenslauf 2026, Arbeitszeugnis, Altes Anschreiben" class="w-full text-sm px-3 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500">
-          </div>
-          <div>
-            <label class="block text-xs font-medium text-slate-700 mb-1">Eingelesener Text / Rohdaten &amp; Notizen</label>
-            <textarea id="vault-raw-text" rows="4" placeholder="Füge hier Text ein oder lade ein Foto / eine Textdatei oben hoch…" class="w-full text-sm px-3 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500"></textarea>
-          </div>
-        </div>
-
-        <div class="flex flex-wrap gap-2.5">
-          <button type="button" onclick="saveVaultDocument()" class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-xl flex items-center gap-1.5 transition">
-            <i data-lucide="bookmark-plus" class="w-4 h-4"></i>
-            <span>In Tresor speichern</span>
-          </button>
-          <button type="button" onclick="extractVaultToProfile()" id="btn-vault-extract" class="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-semibold rounded-xl flex items-center gap-1.5 transition">
+          <button type="button" onclick="extractVaultToProfile()" id="btn-vault-extract" class="flex-1 py-2.5 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20 transition">
             <i data-lucide="sparkles" class="w-4 h-4"></i>
-            <span>Daten auslesen &amp; ins Profil übernehmen</span>
+            <span>Mit KI auslesen &amp; in Tresor übernehmen</span>
           </button>
         </div>
+      </div>
 
-        <div class="pt-3 border-t border-slate-100">
-          <p class="text-xs font-semibold text-slate-700 mb-2">Gespeicherte Dokumente im Tresor:</p>
+      <!-- Sektionen: Persönliche Daten, Berufserfahrung, Fähigkeiten (Wie Bild 1) -->
+      <div class="space-y-2 pt-2">
+        <!-- 1. Persönliche Daten -->
+        <div class="bg-[#141b2d] rounded-2xl border border-slate-800 p-4 transition">
+          <div class="flex items-center justify-between cursor-pointer" onclick="toggleSection('sec-personal')">
+            <div class="flex items-center gap-2.5">
+              <i data-lucide="user" class="w-4 h-4 text-blue-400"></i>
+              <div>
+                <h4 class="text-sm font-bold text-white">Persönliche Daten</h4>
+                <p id="vault-profile-preview" class="text-xs text-slate-400 mt-0.5">Max Mustermann • max@beispiel.de</p>
+              </div>
+            </div>
+            <button type="button" class="w-7 h-7 rounded-lg bg-slate-800 text-slate-300 flex items-center justify-center hover:bg-slate-700" aria-label="Persönliche Daten bearbeiten">
+              <i data-lucide="plus" id="icon-sec-personal" class="w-4 h-4 transition-transform"></i>
+            </button>
+          </div>
+
+          <!-- Inline Edit Form -->
+          <div id="sec-personal" class="hidden mt-4 pt-4 border-t border-slate-800 space-y-3">
+            <div class="grid grid-cols-2 gap-2.5">
+              <div>
+                <label for="prof-firstname" class="block text-[11px] text-slate-400 mb-1">Vorname</label>
+                <input type="text" id="prof-firstname" value="Max" class="w-full text-xs px-3 py-2 rounded-lg bg-[#0b0f19] border border-slate-700 text-white focus:ring-1 focus:ring-blue-500">
+              </div>
+              <div>
+                <label for="prof-lastname" class="block text-[11px] text-slate-400 mb-1">Nachname</label>
+                <input type="text" id="prof-lastname" value="Mustermann" class="w-full text-xs px-3 py-2 rounded-lg bg-[#0b0f19] border border-slate-700 text-white focus:ring-1 focus:ring-blue-500">
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2.5">
+              <div>
+                <label for="prof-email" class="block text-[11px] text-slate-400 mb-1">E-Mail</label>
+                <input type="email" id="prof-email" value="max@beispiel.de" class="w-full text-xs px-3 py-2 rounded-lg bg-[#0b0f19] border border-slate-700 text-white focus:ring-1 focus:ring-blue-500">
+              </div>
+              <div>
+                <label for="prof-phone" class="block text-[11px] text-slate-400 mb-1">Telefon</label>
+                <input type="text" id="prof-phone" value="0170 1234567" class="w-full text-xs px-3 py-2 rounded-lg bg-[#0b0f19] border border-slate-700 text-white focus:ring-1 focus:ring-blue-500">
+              </div>
+            </div>
+            <div class="grid grid-cols-3 gap-2.5">
+              <div class="col-span-2">
+                <label for="prof-street" class="block text-[11px] text-slate-400 mb-1">Straße &amp; Nr.</label>
+                <input type="text" id="prof-street" value="Musterstraße 12" class="w-full text-xs px-3 py-2 rounded-lg bg-[#0b0f19] border border-slate-700 text-white focus:ring-1 focus:ring-blue-500">
+              </div>
+              <div>
+                <label for="prof-city" class="block text-[11px] text-slate-400 mb-1">PLZ &amp; Stadt</label>
+                <input type="text" id="prof-city" value="10115 Berlin" class="w-full text-xs px-3 py-2 rounded-lg bg-[#0b0f19] border border-slate-700 text-white focus:ring-1 focus:ring-blue-500">
+              </div>
+            </div>
+            <button type="button" onclick="saveProfileData()" class="w-full py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-lg transition">
+              Änderungen übernehmen
+            </button>
+          </div>
+        </div>
+
+        <!-- 2. Berufserfahrung -->
+        <div class="bg-[#141b2d] rounded-2xl border border-slate-800 p-4 transition">
+          <div class="flex items-center justify-between cursor-pointer" onclick="toggleSection('sec-experience')">
+            <div class="flex items-center gap-2.5">
+              <i data-lucide="briefcase" class="w-4 h-4 text-indigo-400"></i>
+              <div>
+                <h4 class="text-sm font-bold text-white">Berufserfahrung</h4>
+                <p id="vault-exp-preview" class="text-xs text-slate-400 mt-0.5">2021 - heute: Projektmanager bei Beispiel AG</p>
+              </div>
+            </div>
+            <button type="button" class="w-7 h-7 rounded-lg bg-slate-800 text-slate-300 flex items-center justify-center hover:bg-slate-700" aria-label="Berufserfahrung bearbeiten">
+              <i data-lucide="plus" id="icon-sec-experience" class="w-4 h-4 transition-transform"></i>
+            </button>
+          </div>
+
+          <div id="sec-experience" class="hidden mt-4 pt-4 border-t border-slate-800 space-y-3">
+            <label for="prof-experience" class="block text-[11px] text-slate-400 mb-1">Stationen (durch Zeilenumbruch getrennt)</label>
+            <textarea id="prof-experience" rows="3" class="w-full text-xs px-3 py-2 rounded-lg bg-[#0b0f19] border border-slate-700 text-white focus:ring-1 focus:ring-blue-500">2021 - heute: Projektmanager bei Beispiel AG
+2018 - 2021: Marketing Assistant bei Muster GmbH</textarea>
+            <button type="button" onclick="saveProfileData()" class="w-full py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-lg transition">
+              Berufserfahrung speichern
+            </button>
+          </div>
+        </div>
+
+        <!-- 3. Fähigkeiten -->
+        <div class="bg-[#141b2d] rounded-2xl border border-slate-800 p-4 transition">
+          <div class="flex items-center justify-between cursor-pointer" onclick="toggleSection('sec-skills')">
+            <div class="flex items-center gap-2.5">
+              <i data-lucide="star" class="w-4 h-4 text-amber-400"></i>
+              <div>
+                <h4 class="text-sm font-bold text-white">Fähigkeiten</h4>
+                <p id="vault-skills-preview" class="text-xs text-slate-400 mt-0.5">Projektmanagement, Teamleitung, Deutsch C2</p>
+              </div>
+            </div>
+            <button type="button" class="w-7 h-7 rounded-lg bg-slate-800 text-slate-300 flex items-center justify-center hover:bg-slate-700" aria-label="Fähigkeiten bearbeiten">
+              <i data-lucide="plus" id="icon-sec-skills" class="w-4 h-4 transition-transform"></i>
+            </button>
+          </div>
+
+          <div id="sec-skills" class="hidden mt-4 pt-4 border-t border-slate-800 space-y-3">
+            <label for="prof-skills" class="block text-[11px] text-slate-400 mb-1">Fähigkeiten &amp; Qualifikationen (kommagetrennt)</label>
+            <input type="text" id="prof-skills" value="Projektmanagement, Teamleitung, Deutsch C2, Englisch B2, CRM-Systeme" class="w-full text-xs px-3 py-2 rounded-lg bg-[#0b0f19] border border-slate-700 text-white focus:ring-1 focus:ring-blue-500">
+            <label for="prof-about" class="block text-[11px] text-slate-400 mb-1 mt-2">Über mich / Stärken</label>
+            <textarea id="prof-about" rows="2" class="w-full text-xs px-3 py-2 rounded-lg bg-[#0b0f19] border border-slate-700 text-white focus:ring-1 focus:ring-blue-500">Strukturierter, lösungsorientierter Teamplayer mit Leidenschaft für digitale Transformation.</textarea>
+            <button type="button" onclick="saveProfileData()" class="w-full py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-lg transition">
+              Fähigkeiten speichern
+            </button>
+          </div>
+        </div>
+
+        <!-- Hinterlegte Dokumente Liste -->
+        <div class="pt-3">
+          <div class="flex items-center justify-between mb-2 px-1">
+            <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Gespeicherte Dokumente im Tresor</span>
+            <span id="vault-docs-count" class="text-[11px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-300">0 Dokumente</span>
+          </div>
           <div id="vault-docs-list" class="space-y-2"></div>
         </div>
       </div>
-
-      <div class="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
-        <h2 class="text-lg font-bold text-slate-900 mb-1 flex items-center gap-2">
-          <i data-lucide="user" class="w-5 h-5 text-blue-600"></i>
-          Bewerber-Stammdaten
-        </h2>
-        <p class="text-xs text-slate-500 mb-6">Diese Daten werden automatisch als Absender und für die KI-Generierung verwendet.</p>
-
-        <form id="profile-form" onsubmit="saveProfileData(event)" class="space-y-4">
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label for="prof-firstname" class="block text-xs font-medium text-slate-700 mb-1">Vorname</label>
-              <input type="text" id="prof-firstname" value="Max" class="w-full text-sm px-3 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500">
-            </div>
-            <div>
-              <label for="prof-lastname" class="block text-xs font-medium text-slate-700 mb-1">Nachname</label>
-              <input type="text" id="prof-lastname" value="Mustermann" class="w-full text-sm px-3 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500">
-            </div>
-          </div>
-
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label for="prof-email" class="block text-xs font-medium text-slate-700 mb-1">E-Mail</label>
-              <input type="email" id="prof-email" value="max@beispiel.de" class="w-full text-sm px-3 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500">
-            </div>
-            <div>
-              <label for="prof-phone" class="block text-xs font-medium text-slate-700 mb-1">Telefon</label>
-              <input type="text" id="prof-phone" value="0170 1234567" class="w-full text-sm px-3 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500">
-            </div>
-          </div>
-
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div class="sm:col-span-2">
-              <label for="prof-street" class="block text-xs font-medium text-slate-700 mb-1">Straße & Hausnummer</label>
-              <input type="text" id="prof-street" value="Musterstraße 12" class="w-full text-sm px-3 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500">
-            </div>
-            <div>
-              <label for="prof-city" class="block text-xs font-medium text-slate-700 mb-1">PLZ & Stadt</label>
-              <input type="text" id="prof-city" value="10115 Berlin" class="w-full text-sm px-3 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500">
-            </div>
-          </div>
-
-          <div>
-            <label for="prof-skills" class="block text-xs font-medium text-slate-700 mb-1">Fähigkeiten & Qualifikationen</label>
-            <input type="text" id="prof-skills" value="Projektmanagement, Teamleitung, Deutsch C2, Englisch B2, CRM-Systeme" class="w-full text-sm px-3 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500">
-          </div>
-
-          <div>
-            <label for="prof-experience" class="block text-xs font-medium text-slate-700 mb-1">Bisherige Berufserfahrung / Werdegang</label>
-            <textarea id="prof-experience" rows="3" class="w-full text-sm px-3 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500">2021 - heute: Projektmanager bei Beispiel AG
-2018 - 2021: Marketing Assistant bei Muster GmbH</textarea>
-          </div>
-
-          <div>
-            <label for="prof-about" class="block text-xs font-medium text-slate-700 mb-1">Über mich / Persönliche Schwerpunkte</label>
-            <textarea id="prof-about" rows="2" class="w-full text-sm px-3 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500">Strukturierter, lösungsorientierter Teamplayer mit Leidenschaft für digitale Transformation und Innovation.</textarea>
-          </div>
-
-          <div class="pt-2 flex justify-end">
-            <button type="submit" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm rounded-xl shadow-sm transition">
-              Profil speichern
-            </button>
-          </div>
-        </form>
-      </div>
     </section>
 
+    <!-- ========================================== -->
+    <!-- SCREEN 2: NOTIZEN SCANNEN (Wie Bild 2)      -->
+    <!-- ========================================== -->
+    <section id="tab-scan" class="hidden space-y-4">
+      <!-- Top Title with Back Arrow -->
+      <div class="flex items-center gap-3 py-1">
+        <button type="button" onclick="switchTab('home')" class="p-2 -ml-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition" aria-label="Zurück zur Übersicht" title="Zurück zur Übersicht">
+          <i data-lucide="arrow-left" class="w-5 h-5"></i>
+        </button>
+        <h2 class="text-lg font-bold text-white">Notizen scannen</h2>
+      </div>
 
-    <!-- TAB 4: GESPEICHERTE ANSCHREIBEN (ARCHIV) -->
-    <section id="tab-history" class="hidden space-y-4 max-w-4xl mx-auto">
-      <div class="flex items-center justify-between no-print">
-        <button type="button" onclick="switchTab('home')" class="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 px-3 py-1.5 rounded-lg bg-white border border-slate-200 hover:bg-slate-50 transition">
-          <i data-lucide="arrow-left" class="w-4 h-4"></i>
-          <span>Zurück zur Übersicht</span>
+      <p class="text-xs sm:text-sm text-slate-400 leading-relaxed">
+        Fotografiere deine handschriftlichen Stichpunkte oder wähle ein Bild aus. Die Texterkennung erkennt deine Notizen automatisch für das KI-Anschreiben.
+      </p>
+
+      <!-- 2 große Pill-Buttons (Kamera & Galerie) -->
+      <div class="grid grid-cols-2 gap-3 pt-1">
+        <button type="button" onclick="document.getElementById('scan-camera-input').click()" class="py-3 px-4 bg-blue-500 hover:bg-blue-400 text-slate-950 font-bold rounded-2xl text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20 transition">
+          <i data-lucide="camera" class="w-4 h-4"></i>
+          <span>Kamera</span>
+        </button>
+        <button type="button" onclick="document.getElementById('scan-gallery-input').click()" class="py-3 px-4 bg-[#141b2d] hover:bg-[#1a233b] text-white font-semibold rounded-2xl text-xs sm:text-sm flex items-center justify-center gap-2 border border-slate-800 transition">
+          <i data-lucide="image" class="w-4 h-4 text-slate-400"></i>
+          <span>Galerie</span>
         </button>
       </div>
 
-      <div class="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
-        <div class="flex items-center justify-between mb-4">
-          <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
-            <i data-lucide="folder" class="w-5 h-5 text-indigo-600"></i>
-            Gespeicherte Anschreiben
-          </h2>
-          <span id="history-count" class="text-xs text-slate-500">0 Dokumente</span>
+      <!-- Hidden Scan Inputs -->
+      <input type="file" id="scan-camera-input" accept="image/*" capture="environment" class="hidden" onchange="handleImageOcr(event)" aria-label="Notiz-Foto aufnehmen" title="Notiz-Foto aufnehmen">
+      <input type="file" id="scan-gallery-input" accept="image/*" class="hidden" onchange="handleImageOcr(event)" aria-label="Notiz-Bild auswählen" title="Notiz-Bild auswählen">
+
+      <!-- OCR Status Box -->
+      <div id="ocr-loading" class="hidden items-center justify-center gap-2 py-4 bg-[#141b2d] rounded-2xl border border-slate-800 text-blue-400 text-xs font-semibold">
+        <div class="animate-spin rounded-full h-5 w-5 border-2 border-blue-500 border-t-transparent"></div>
+        <span id="ocr-status">Analysiere Handschrift/Text…</span>
+      </div>
+
+      <!-- Tipps Box (Wie Bild 2) -->
+      <div class="bg-[#141b2d]/80 border border-slate-800/90 rounded-2xl p-4 sm:p-5 space-y-2.5">
+        <h4 class="text-xs sm:text-sm font-bold text-white flex items-center gap-2">
+          <i data-lucide="lightbulb" class="w-4 h-4 text-amber-400"></i>
+          <span>Tipps für optimale Handschrift-Erkennung</span>
+        </h4>
+        <ul class="text-xs text-slate-400 space-y-1.5 list-disc list-inside">
+          <li>Gute Beleuchtung ohne starke Schatten</li>
+          <li>Blatt möglichst gerade von oben fotografieren</li>
+          <li>Deutliche Schrift auf hellem oder liniertem Papier</li>
+        </ul>
+      </div>
+
+      <!-- Erkannter Notiztext -->
+      <div class="space-y-1.5 pt-2">
+        <div class="flex items-center justify-between">
+          <label for="notes-text" class="text-xs font-medium text-slate-300">Erkannte Stichpunkte &amp; Kernmotivation:</label>
+          <button type="button" onclick="clearNotes()" class="text-xs text-red-400 hover:underline">Löschen</button>
+        </div>
+        <textarea id="notes-text" rows="4" placeholder="Erkannte Notizen erscheinen hier oder tippe deine Gedanken direkt ein…" class="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl bg-[#0b0f19] border border-slate-800 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+      </div>
+
+      <!-- Weiter zu Anschreiben Button -->
+      <button type="button" onclick="openGeneratorStep(3)" class="w-full py-3 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-semibold rounded-2xl text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20 transition">
+        <span>Notizen übernehmen &amp; zu Anschreiben</span>
+        <i data-lucide="arrow-right" class="w-4 h-4"></i>
+      </button>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- SCREEN 3: ANSCHREIBEN GENERATOR (Wie Bild 3) -->
+    <!-- ========================================== -->
+    <section id="tab-editor" class="hidden space-y-4">
+      <!-- Top Title with Back Arrow -->
+      <div class="flex items-center gap-3 py-1">
+        <button type="button" onclick="switchTab('home')" class="p-2 -ml-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition" aria-label="Zurück zur Übersicht" title="Zurück zur Übersicht">
+          <i data-lucide="arrow-left" class="w-5 h-5"></i>
+        </button>
+        <h2 class="text-lg font-bold text-white">Anschreiben</h2>
+      </div>
+
+      <!-- 4-Schritte Progress & Pill Tabs (Wie Bild 3) -->
+      <div class="space-y-2">
+        <div class="flex items-center justify-between text-xs font-semibold text-slate-300">
+          <span id="editor-step-label">Schritt 1 von 4: Jobdaten</span>
+          <span id="editor-step-pct" class="text-blue-400">25%</span>
+        </div>
+        <!-- Progress Bar -->
+        <div class="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+          <div id="editor-progress-bar" class="h-full w-1/4 bg-blue-500 rounded-full transition-all duration-300"></div>
+        </div>
+        <!-- 4 Pill Tabs -->
+        <div class="grid grid-cols-4 gap-1.5 pt-1">
+          <button type="button" onclick="setEditorStep(1)" id="step-pill-1" class="py-1.5 px-2 rounded-lg text-[11px] font-semibold bg-blue-600 text-white text-center transition">1. Jobdaten</button>
+          <button type="button" onclick="setEditorStep(2)" id="step-pill-2" class="py-1.5 px-2 rounded-lg text-[11px] font-medium bg-[#141b2d] text-slate-400 text-center border border-slate-800 transition">2. Notizen</button>
+          <button type="button" onclick="setEditorStep(3)" id="step-pill-3" class="py-1.5 px-2 rounded-lg text-[11px] font-medium bg-[#141b2d] text-slate-400 text-center border border-slate-800 transition">3. KI &amp; Text</button>
+          <button type="button" onclick="setEditorStep(4)" id="step-pill-4" class="py-1.5 px-2 rounded-lg text-[11px] font-medium bg-[#141b2d] text-slate-400 text-center border border-slate-800 transition">4. Vorschau</button>
+        </div>
+      </div>
+
+      <!-- STEP 1: JOBDATEN (Wie Bild 3) -->
+      <div id="panel-step-1" class="space-y-3.5 pt-1">
+        <p class="text-xs text-slate-400">
+          Wähle den Modus und füge die Stellenanzeige sowie optionale Empfängerdaten ein.
+        </p>
+
+        <!-- Segmented Toggle: [✓ Neu generieren] [Vorhandenes verbessern] -->
+        <div class="p-1 rounded-xl bg-[#141b2d] border border-slate-800 flex text-xs font-semibold">
+          <button type="button" onclick="setLetterMode('new')" id="toggle-mode-new" class="flex-1 py-2 rounded-lg bg-slate-800 text-white flex items-center justify-center gap-1.5 transition">
+            <i data-lucide="check" class="w-3.5 h-3.5 text-blue-400"></i>
+            <span>Neu generieren</span>
+          </button>
+          <button type="button" onclick="setLetterMode('improve')" id="toggle-mode-improve" class="flex-1 py-2 rounded-lg text-slate-400 hover:text-white flex items-center justify-center gap-1.5 transition">
+            <span>Vorhandenes verbessern</span>
+          </button>
         </div>
 
-        <div id="history-list" class="space-y-3">
-          <!-- Dynamically populated -->
+        <!-- Optionaler Entwurf für Verbesserungs-Modus -->
+        <div id="box-existing-draft" class="hidden space-y-1">
+          <label for="existing-letter-text" class="text-xs font-medium text-slate-300">Bestehendes Anschreiben einfügen:</label>
+          <textarea id="existing-letter-text" rows="4" placeholder="Füge deinen bestehenden Rohentwurf hier ein…" class="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl bg-[#0b0f19] border border-slate-800 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
         </div>
+
+        <!-- Stellenanzeige Textarea -->
+        <div class="space-y-1">
+          <label for="job-description" class="text-xs font-medium text-slate-300">Stellenanzeige / Anforderungen:</label>
+          <textarea id="job-description" rows="4" placeholder="Füge hier die Aufgaben, Anforderungen oder den Text der Stellenanzeige ein…" class="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl bg-[#0b0f19] border border-slate-800 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+        </div>
+
+        <!-- Ausklappbare Empfängerdaten (DIN 5008) (Wie Bild 3) -->
+        <div class="bg-[#141b2d] rounded-2xl border border-slate-800 p-4 transition">
+          <div class="flex items-center justify-between cursor-pointer" onclick="toggleSection('sec-recipient')">
+            <div class="flex items-center gap-2.5">
+              <i data-lucide="building-2" class="w-4 h-4 text-blue-400"></i>
+              <div>
+                <h4 class="text-xs sm:text-sm font-bold text-white">Empfängerdaten (DIN 5008)</h4>
+                <p class="text-[11px] text-slate-400 mt-0.5">Optional: Firma, Ansprechpartner &amp; Adresse</p>
+              </div>
+            </div>
+            <i data-lucide="chevron-down" id="icon-sec-recipient" class="w-4 h-4 text-slate-400 transition-transform"></i>
+          </div>
+
+          <div id="sec-recipient" class="hidden mt-3 pt-3 border-t border-slate-800 space-y-2.5">
+            <div>
+              <label for="job-title" class="block text-[11px] text-slate-400 mb-1">Angestrebte Position</label>
+              <input type="text" id="job-title" value="Projektmanager Marketing" class="w-full text-xs px-3 py-2 rounded-lg bg-[#0b0f19] border border-slate-700 text-white focus:ring-1 focus:ring-blue-500">
+            </div>
+            <div>
+              <label for="job-company" class="block text-[11px] text-slate-400 mb-1">Unternehmensname</label>
+              <input type="text" id="job-company" value="Musterfirma GmbH" class="w-full text-xs px-3 py-2 rounded-lg bg-[#0b0f19] border border-slate-700 text-white focus:ring-1 focus:ring-blue-500">
+            </div>
+            <div>
+              <label for="job-recipient-person" class="block text-[11px] text-slate-400 mb-1">Ansprechpartner / Abteilung</label>
+              <input type="text" id="job-recipient-person" placeholder="z. B. Frau Dr. Schmidt" class="w-full text-xs px-3 py-2 rounded-lg bg-[#0b0f19] border border-slate-700 text-white focus:ring-1 focus:ring-blue-500">
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label for="job-recipient-street" class="block text-[11px] text-slate-400 mb-1">Straße &amp; Nr.</label>
+                <input type="text" id="job-recipient-street" placeholder="Hauptstraße 100" class="w-full text-xs px-3 py-2 rounded-lg bg-[#0b0f19] border border-slate-700 text-white focus:ring-1 focus:ring-blue-500">
+              </div>
+              <div>
+                <label for="job-recipient-city" class="block text-[11px] text-slate-400 mb-1">PLZ &amp; Ort</label>
+                <input type="text" id="job-recipient-city" placeholder="10117 Berlin" class="w-full text-xs px-3 py-2 rounded-lg bg-[#0b0f19] border border-slate-700 text-white focus:ring-1 focus:ring-blue-500">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Button: Weiter: Notizen → -->
+        <button type="button" onclick="setEditorStep(2)" class="w-full py-3 px-4 bg-blue-500 hover:bg-blue-400 text-slate-950 font-bold rounded-2xl text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20 transition">
+          <span>Weiter: Notizen</span>
+          <i data-lucide="arrow-right" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <!-- STEP 2: NOTIZEN & MOTIVATION -->
+      <div id="panel-step-2" class="hidden space-y-3.5 pt-1">
+        <p class="text-xs text-slate-400">
+          Notizen aus dem Scan oder eigene Stichpunkte fließen direkt in die Argumentation ein.
+        </p>
+
+        <div class="p-4 bg-[#141b2d] rounded-2xl border border-slate-800 space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold text-white flex items-center gap-1.5">
+              <i data-lucide="pen-tool" class="w-3.5 h-3.5 text-blue-400"></i>
+              Persönliche Notizen &amp; Stichpunkte
+            </span>
+            <button type="button" onclick="switchTab('scan')" class="text-xs text-blue-400 hover:underline">Scan-Kamera öffnen</button>
+          </div>
+          <textarea id="notes-text-step2" rows="5" placeholder="z. B. Motivation für den Wechsel, 4 Jahre Erfahrung mit agilem Projektmanagement, kenne die Branche gut..." class="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl bg-[#0b0f19] border border-slate-800 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+        </div>
+
+        <div class="flex gap-2.5">
+          <button type="button" onclick="setEditorStep(1)" class="py-3 px-4 bg-[#141b2d] text-slate-300 font-semibold rounded-2xl text-xs border border-slate-800 transition">Zurück</button>
+          <button type="button" onclick="setEditorStep(3)" class="flex-1 py-3 px-4 bg-blue-500 hover:bg-blue-400 text-slate-950 font-bold rounded-2xl text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20 transition">
+            <span>Weiter: KI &amp; Text</span>
+            <i data-lucide="arrow-right" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- STEP 3: KI-GENERIERUNG -->
+      <div id="panel-step-3" class="hidden space-y-3.5 pt-1">
+        <div class="p-4 bg-[#141b2d] rounded-2xl border border-slate-800 space-y-2 text-xs text-slate-300">
+          <p class="font-bold text-white text-sm">Zusammenfassung für KI-Generierung:</p>
+          <p><span class="text-slate-400">Position:</span> <span id="wiz-job-summary" class="text-white font-medium">Projektmanager Marketing</span></p>
+          <p><span class="text-slate-400">Unternehmen:</span> <span id="wiz-company-summary" class="text-white font-medium">Musterfirma GmbH</span></p>
+          <p><span class="text-slate-400">Daten-Tresor:</span> <span id="wiz-vault-summary" class="text-blue-400 font-medium">0 Dokumente aktiv</span></p>
+        </div>
+
+        <!-- KI Action Button -->
+        <button type="button" onclick="generateCoverLetter(isImprovementMode)" id="btn-generate" class="w-full py-3.5 px-4 bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:from-blue-500 hover:to-indigo-500 text-white font-bold rounded-2xl text-sm flex items-center justify-center gap-2 shadow-xl shadow-blue-500/25 transition">
+          <i data-lucide="sparkles" class="w-5 h-5"></i>
+          <span id="btn-generate-text">Anschreiben mit Gemini KI generieren</span>
+        </button>
+
+        <div class="flex gap-2.5 pt-2">
+          <button type="button" onclick="setEditorStep(2)" class="py-3 px-4 bg-[#141b2d] text-slate-300 font-semibold rounded-2xl text-xs border border-slate-800 transition">Zurück</button>
+          <button type="button" onclick="setEditorStep(4)" class="flex-1 py-3 px-4 bg-slate-800 hover:bg-slate-700 text-white font-semibold rounded-2xl text-xs sm:text-sm flex items-center justify-center gap-2 border border-slate-700 transition">
+            <span>Direkt zur Vorschau &amp; PDF</span>
+            <i data-lucide="arrow-right" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- STEP 4: VORSCHAU & DIN 5008 EXPORT -->
+      <div id="panel-step-4" class="hidden space-y-4 pt-1">
+        <!-- Action Toolbar -->
+        <div class="bg-[#141b2d] rounded-2xl border border-slate-800 p-3.5 flex flex-wrap items-center justify-between gap-2.5 no-print">
+          <div class="flex items-center space-x-2">
+            <label for="template-select" class="text-xs font-semibold text-slate-400">Design:</label>
+            <select id="template-select" aria-label="Vorlage auswählen" onchange="updateTemplateStyle()" class="text-xs font-medium px-2.5 py-1.5 rounded-lg border border-slate-700 bg-[#0b0f19] text-white focus:ring-1 focus:ring-blue-500">
+              <option value="classic">DIN 5008 Standard</option>
+              <option value="modern">Modern (Akzentlinie)</option>
+              <option value="elegant">Minimalistisch</option>
+            </select>
+          </div>
+
+          <div class="flex items-center space-x-1.5">
+            <button onclick="downloadPdfDirectly()" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-xl flex items-center gap-1.5 shadow-md shadow-blue-500/20 transition">
+              <i data-lucide="download" class="w-3.5 h-3.5"></i> PDF
+            </button>
+            <button onclick="window.print()" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium rounded-xl border border-slate-700 flex items-center gap-1 transition" title="Drucken">
+              <i data-lucide="printer" class="w-3.5 h-3.5"></i>
+            </button>
+            <button onclick="saveCurrentLetter()" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-emerald-400 text-xs font-medium rounded-xl border border-slate-700 flex items-center gap-1 transition" title="Im Verlauf speichern">
+              <i data-lucide="save" class="w-3.5 h-3.5"></i>
+            </button>
+            <button onclick="copyToClipboard()" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium rounded-xl border border-slate-700 flex items-center gap-1 transition" title="Text kopieren">
+              <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- DIN A4 Preview Page Container (Weißes Blatt im Kontrast zum Dark Theme) -->
+        <div class="rounded-2xl p-2 sm:p-4 flex justify-center overflow-x-auto bg-[#05070d] border border-slate-800/80">
+          <div id="print-letter" class="page-sheet bg-white p-8 sm:p-12 shadow-2xl rounded-sm text-slate-900 relative text-xs sm:text-sm leading-relaxed">
+            <!-- DIN 5008 Falt- und Lochmarken -->
+            <div class="fold-mark-1" title="Faltmarke 1 (105mm)"></div>
+            <div class="punch-mark" title="Lochmarke Mitte (148.5mm)"></div>
+            <div class="fold-mark-2" title="Faltmarke 2 (210mm)"></div>
+
+            <!-- Header / Absender -->
+            <div class="border-b pb-4 mb-6" id="letter-header-container">
+              <div class="flex justify-between items-start">
+                <div>
+                  <h1 id="preview-sender-name" class="text-lg sm:text-xl font-bold text-slate-900">Max Mustermann</h1>
+                  <p id="preview-sender-address" class="text-xs text-slate-600">Musterstraße 12 • 10115 Berlin</p>
+                  <p id="preview-sender-contact" class="text-xs text-slate-600">E-Mail: max@beispiel.de • Tel: 0170 1234567</p>
+                </div>
+                <div class="text-right text-xs text-slate-500">
+                  <span id="preview-date"></span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Empfänger-Adresse (DIN 5008 Fensterzone) -->
+            <div class="mb-7 text-xs text-slate-700 leading-normal max-w-xs">
+              <p class="text-[10px] text-slate-400 mb-1 border-b pb-0.5" id="preview-mini-sender">Max Mustermann • Musterstraße 12 • 10115 Berlin</p>
+              <p id="preview-recipient-company" class="font-semibold text-slate-800" contenteditable="true">Musterfirma GmbH</p>
+              <p id="preview-recipient-person" contenteditable="true">Personalabteilung</p>
+              <p id="preview-recipient-address" contenteditable="true">Hauptstraße 100</p>
+              <p id="preview-recipient-city" contenteditable="true">10117 Berlin</p>
+            </div>
+
+            <!-- Betreffzeile -->
+            <div class="mb-5">
+              <h2 id="preview-subject" class="font-bold text-sm sm:text-base text-slate-900" contenteditable="true">Bewerbung als Projektmanager Marketing</h2>
+              <p id="preview-ref" class="text-xs text-slate-500 mt-0.5" contenteditable="true">Referenz / Bezug: Ihre Stellenausschreibung</p>
+            </div>
+
+            <!-- Anschreiben Fließtext -->
+            <div class="mb-6 text-justify text-slate-800 leading-relaxed space-y-3">
+              <div id="preview-body" contenteditable="true" class="focus:outline-none focus:ring-1 focus:ring-blue-400 p-1.5 -m-1.5 rounded">
+                <p>Sehr geehrte Damen und Herren,</p>
+                <br>
+                <p>mit großem Interesse habe ich Ihre Stellenausschreibung gelesen. Auf Basis meiner bisherigen beruflichen Erfahrungen sowie meines fundierten Profils möchte ich mich Ihnen als engagierter und verlässlicher Mitarbeiter vorstellen.</p>
+                <br>
+                <p>In meinen bisherigen Stationen konnte ich wertvolle Praxiserfahrungen sammeln und meine Kenntnisse gezielt vertiefen. Zu meinen Stärken zählen eine strukturierte Arbeitsweise, ausgeprägte Teamfähigkeit sowie die Motivation, komplexe Herausforderungen eigenständig und zielorientiert zu lösen.</p>
+                <br>
+                <p>Über die Gelegenheit, mich Ihnen in einem persönlichen Vorstellungsgespräch vorzustellen, freue ich mich sehr.</p>
+                <br>
+                <p>Mit freundlichen Grüßen</p>
+              </div>
+            </div>
+
+            <!-- Grußformel & Name -->
+            <div class="mt-7 pt-2">
+              <p id="preview-sign-name" class="font-semibold text-slate-900">Max Mustermann</p>
+              <p id="preview-attachments" class="text-xs text-slate-500 mt-4">Anlagen: Lebenslauf, Zeugnisse</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- SCREEN 4: VERLAUF / ARCHIV                 -->
+    <!-- ========================================== -->
+    <section id="tab-history" class="hidden space-y-4">
+      <!-- Top Title with Back Arrow -->
+      <div class="flex items-center gap-3 py-1">
+        <button type="button" onclick="switchTab('home')" class="p-2 -ml-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition" aria-label="Zurück zur Übersicht" title="Zurück zur Übersicht">
+          <i data-lucide="arrow-left" class="w-5 h-5"></i>
+        </button>
+        <h2 class="text-lg font-bold text-white">Gespeicherte Anschreiben</h2>
+      </div>
+
+      <div class="bg-[#141b2d] rounded-2xl border border-slate-800 p-4 sm:p-5 space-y-3">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-semibold text-slate-400">Archivierte Entwürfe</span>
+          <span id="history-count" class="text-xs text-slate-400">0 Dokumente</span>
+        </div>
+        <div id="history-list" class="space-y-2.5"></div>
       </div>
     </section>
 
   </main>
 
-  <!-- Footer with Android & GitHub info -->
-  <footer class="bg-white border-t border-slate-200 py-6 mt-12 text-center text-xs text-slate-500 no-print">
-    <div class="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-      <p>© 2026 Bewerbungs-Helfer • Optimiert für Web & Android</p>
-      <div class="flex items-center gap-4 text-slate-600">
-        <a href="https://github.com/janzock-cell/job-Bewerbung" target="_blank" rel="noopener noreferrer" class="hover:text-blue-600 flex items-center gap-1">
-          <i data-lucide="github" class="w-4 h-4"></i> GitHub Repository
-        </a>
-      </div>
-    </div>
-  </footer>
-
   <!-- API Key Modal -->
-  <div id="apikey-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
-    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-100">
+  <div id="apikey-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+    <div class="bg-[#141b2d] rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-800 text-white">
       <div class="flex items-center justify-between mb-4">
-        <h3 class="font-bold text-slate-900 text-base flex items-center gap-2">
-          <i data-lucide="key" class="w-4 h-4 text-amber-500"></i>
+        <h3 class="font-bold text-base flex items-center gap-2 text-white">
+          <i data-lucide="key" class="w-4 h-4 text-amber-400"></i>
           Gemini API-Schlüssel
         </h3>
-        <button onclick="closeApiKeyModal()" class="text-slate-400 hover:text-slate-600" aria-label="Fenster schließen" title="Fenster schließen">
+        <button onclick="closeApiKeyModal()" class="text-slate-400 hover:text-white" aria-label="Fenster schließen" title="Fenster schließen">
           <i data-lucide="x" class="w-5 h-5"></i>
         </button>
       </div>
 
-      <p class="text-xs text-slate-600 mb-4 leading-relaxed">
-        Du kannst deinen eigenen Google Gemini API-Schlüssel hinterlegen. Falls du keinen Schlüssel einträgst, nutzt die App den intelligenten integrierten Generator.
+      <p class="text-xs text-slate-400 mb-4 leading-relaxed">
+        Du kannst optional deinen eigenen Google Gemini API-Schlüssel hinterlegen. Falls du keinen einträgst, nutzt die App die sichere Netlify-Serverfunktion bzw. den integrierten Generator.
       </p>
 
-      <div class="space-y-3">
-        <input type="password" id="user-gemini-key" placeholder="AIzaSy..." class="w-full text-sm px-3 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500">
+      <input type="password" id="user-gemini-key" placeholder="AIzaSy..." class="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl bg-[#0b0f19] border border-slate-800 text-white placeholder-slate-500 focus:ring-2 focus:ring-blue-500 mb-4">
 
-        <div class="flex justify-between items-center pt-2">
-          <button type="button" onclick="clearApiKey()" class="text-xs text-red-500 hover:underline">Schlüssel löschen</button>
-          <div class="flex space-x-2">
-            <button type="button" onclick="closeApiKeyModal()" class="px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-100 rounded-lg">Abbrechen</button>
-            <button type="button" onclick="saveApiKey()" class="px-4 py-1.5 text-xs bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg">Speichern</button>
-          </div>
+      <div class="flex items-center justify-between">
+        <button type="button" onclick="clearApiKey()" class="text-xs text-red-400 hover:underline">Schlüssel löschen</button>
+        <div class="flex space-x-2">
+          <button type="button" onclick="closeApiKeyModal()" class="px-3 py-1.5 text-xs text-slate-400 hover:text-white rounded-lg">Abbrechen</button>
+          <button type="button" onclick="saveApiKey()" class="px-4 py-1.5 text-xs bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-lg shadow-md shadow-blue-500/20">Speichern</button>
         </div>
       </div>
     </div>
@@ -761,7 +776,7 @@
   <!-- JavaScript Application Logic -->
   <script>
     function escapeHtml(str) {
-      return String(str)
+      return String(str || '')
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
@@ -774,101 +789,138 @@
       const toast = document.getElementById('toast-banner');
       if (!toast) return;
       const styles = {
-        success: 'bg-emerald-50 text-emerald-800 border-emerald-200',
-        error: 'bg-red-50 text-red-800 border-red-200',
-        info: 'bg-blue-50 text-blue-800 border-blue-200'
+        success: 'bg-emerald-950 text-emerald-200 border-emerald-800',
+        error: 'bg-red-950 text-red-200 border-red-800',
+        info: 'bg-blue-950 text-blue-200 border-blue-800'
       };
-      toast.className = `fixed bottom-5 right-5 z-50 max-w-sm rounded-xl px-4 py-3 text-sm font-medium shadow-lg border transition-all no-print ${styles[type] || styles.info}`;
+      toast.className = `fixed bottom-5 right-5 z-50 max-w-sm rounded-xl px-4 py-3 text-xs font-semibold shadow-2xl border transition-all no-print ${styles[type] || styles.info}`;
       toast.textContent = message;
       toast.classList.remove('hidden');
       clearTimeout(toastTimeout);
-      toastTimeout = setTimeout(() => toast.classList.add('hidden'), 4000);
+      toastTimeout = setTimeout(() => toast.classList.add('hidden'), 3500);
     }
 
-    // Tab Switching
+    // Tab Switching (home, vault, scan, editor, history)
     function switchTab(tabId) {
-      ['home', 'create', 'editor', 'profile', 'history'].forEach(tab => {
+      ['home', 'vault', 'scan', 'editor', 'history'].forEach(tab => {
         const el = document.getElementById('tab-' + tab);
         const navEl = document.getElementById('nav-' + tab);
         const mobEl = document.getElementById('mob-' + tab);
         if (el) el.classList.toggle('hidden', tab !== tabId);
         if (navEl) {
           navEl.className = tab === tabId
-            ? 'px-3.5 py-2 rounded-lg text-sm font-medium text-blue-600 bg-blue-50 flex items-center gap-1.5 transition'
-            : 'px-3.5 py-2 rounded-lg text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 flex items-center gap-1.5 transition';
+            ? 'px-3 py-1.5 rounded-lg text-xs font-semibold text-blue-400 bg-blue-500/10 border border-blue-500/20 flex items-center gap-1.5 transition'
+            : 'px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800 flex items-center gap-1.5 transition';
         }
         if (mobEl) {
           mobEl.className = tab === tabId
-            ? 'flex-1 py-1.5 text-center text-xs font-medium text-blue-600 flex flex-col items-center'
-            : 'flex-1 py-1.5 text-center text-xs font-medium text-slate-600 flex flex-col items-center';
+            ? 'flex-1 py-1.5 text-center text-[11px] font-semibold text-blue-400 flex flex-col items-center'
+            : 'flex-1 py-1.5 text-center text-[11px] font-medium text-slate-400 flex flex-col items-center';
         }
       });
       window.scrollTo({ top: 0, behavior: 'smooth' });
       lucide.createIcons();
     }
 
-    function openScanDirectly() {
-      switchTab('create');
-      setWizardStep(2);
-    }
-
-    function openGeneratorDirectly() {
-      switchTab('create');
-      setWizardStep(1);
-    }
-
-    let currentWizardStep = 1;
-    function setWizardStep(step) {
-      currentWizardStep = Math.max(1, Math.min(3, Number(step) || 1));
-      const labels = {
-        1: 'Schritt 1 von 3: Jobdaten & Empfänger',
-        2: 'Schritt 2 von 3: Notizen / Scan',
-        3: 'Schritt 3 von 3: KI-Generierung'
-      };
-      const pctText = currentWizardStep === 1 ? '33 %' : (currentWizardStep === 2 ? '66 %' : '100 %');
-      const widthClass = currentWizardStep === 1 ? 'w-1/3' : (currentWizardStep === 2 ? 'w-2/3' : 'w-full');
-
-      const labelEl = document.getElementById('wizard-step-label');
-      const barEl = document.getElementById('wizard-progress-bar');
-      const pctEl = document.getElementById('wizard-progress-text');
-      if (labelEl) labelEl.textContent = labels[currentWizardStep];
-      if (barEl) {
-        barEl.classList.remove('w-1/3', 'w-2/3', 'w-full');
-        barEl.classList.add(widthClass);
+    function toggleSection(sectionId) {
+      const el = document.getElementById(sectionId);
+      const icon = document.getElementById('icon-' + sectionId);
+      if (!el) return;
+      const isHidden = el.classList.contains('hidden');
+      el.classList.toggle('hidden', !isHidden);
+      if (icon) {
+        if (sectionId === 'sec-recipient') {
+          icon.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
+        } else {
+          icon.style.transform = isHidden ? 'rotate(45deg)' : 'rotate(0deg)';
+        }
       }
-      if (pctEl) pctEl.textContent = pctText;
+    }
 
-      [1, 2, 3].forEach(idx => {
-        const panel = document.getElementById(`wizard-step-${idx}`);
-        const chip = document.getElementById(`wiz-chip-${idx}`);
-        if (panel) panel.classList.toggle('hidden', idx !== currentWizardStep);
-        if (chip) {
-          chip.className = idx === currentWizardStep
-            ? 'px-2.5 py-2 rounded-lg text-xs font-semibold border bg-blue-50 text-blue-700 border-blue-200 flex items-center justify-center gap-1.5 transition'
-            : (idx < currentWizardStep
-              ? 'px-2.5 py-2 rounded-lg text-xs font-medium border bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 flex items-center justify-center gap-1.5 transition'
-              : 'px-2.5 py-2 rounded-lg text-xs font-medium border bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100 flex items-center justify-center gap-1.5 transition');
+    // Editor 4-Schritte Workflow (Jobdaten, Notizen, KI & Text, Vorschau)
+    let currentEditorStep = 1;
+    let isImprovementMode = false;
+
+    function setEditorStep(step) {
+      currentEditorStep = Math.max(1, Math.min(4, Number(step) || 1));
+      const labels = {
+        1: 'Schritt 1 von 4: Jobdaten',
+        2: 'Schritt 2 von 4: Notizen',
+        3: 'Schritt 3 von 4: KI & Text',
+        4: 'Schritt 4 von 4: Vorschau & PDF'
+      };
+      const widths = { 1: 'w-1/4', 2: 'w-2/4', 3: 'w-3/4', 4: 'w-full' };
+      const pcts = { 1: '25%', 2: '50%', 3: '75%', 4: '100%' };
+
+      const labelEl = document.getElementById('editor-step-label');
+      const pctEl = document.getElementById('editor-step-pct');
+      const barEl = document.getElementById('editor-progress-bar');
+      if (labelEl) labelEl.textContent = labels[currentEditorStep];
+      if (pctEl) pctEl.textContent = pcts[currentEditorStep];
+      if (barEl) {
+        barEl.classList.remove('w-1/4', 'w-2/4', 'w-3/4', 'w-full');
+        barEl.classList.add(widths[currentEditorStep]);
+      }
+
+      [1, 2, 3, 4].forEach(idx => {
+        const panel = document.getElementById(`panel-step-${idx}`);
+        const pill = document.getElementById(`step-pill-${idx}`);
+        if (panel) panel.classList.toggle('hidden', idx !== currentEditorStep);
+        if (pill) {
+          pill.className = idx === currentEditorStep
+            ? 'py-1.5 px-2 rounded-lg text-[11px] font-semibold bg-blue-600 text-white text-center transition'
+            : (idx < currentEditorStep
+              ? 'py-1.5 px-2 rounded-lg text-[11px] font-medium bg-emerald-950/60 text-emerald-400 border border-emerald-800 text-center transition'
+              : 'py-1.5 px-2 rounded-lg text-[11px] font-medium bg-[#141b2d] text-slate-400 text-center border border-slate-800 transition');
         }
       });
 
-      if (currentWizardStep === 3) {
-        updateWizardSummary();
+      if (currentEditorStep === 3) {
+        updateStep3Summary();
+      }
+      if (currentEditorStep === 4) {
+        syncJobPreview();
       }
       lucide.createIcons();
     }
 
-    function updateWizardSummary() {
-      const jobTitle = document.getElementById('job-title').value.trim() || 'Projektmanager Marketing';
+    function openGeneratorStep(step) {
+      switchTab('editor');
+      setEditorStep(step);
+    }
+
+    function setLetterMode(mode) {
+      isImprovementMode = mode === 'improve';
+      const btnNew = document.getElementById('toggle-mode-new');
+      const btnImprove = document.getElementById('toggle-mode-improve');
+      const draftBox = document.getElementById('box-existing-draft');
+      const genBtnText = document.getElementById('btn-generate-text');
+
+      if (isImprovementMode) {
+        btnImprove.className = 'flex-1 py-2 rounded-lg bg-slate-800 text-white flex items-center justify-center gap-1.5 transition';
+        btnNew.className = 'flex-1 py-2 rounded-lg text-slate-400 hover:text-white flex items-center justify-center gap-1.5 transition';
+        if (draftBox) draftBox.classList.remove('hidden');
+        if (genBtnText) genBtnText.textContent = 'Bestehendes Anschreiben optimieren';
+      } else {
+        btnNew.className = 'flex-1 py-2 rounded-lg bg-slate-800 text-white flex items-center justify-center gap-1.5 transition';
+        btnImprove.className = 'flex-1 py-2 rounded-lg text-slate-400 hover:text-white flex items-center justify-center gap-1.5 transition';
+        if (draftBox) draftBox.classList.add('hidden');
+        if (genBtnText) genBtnText.textContent = 'Anschreiben mit Gemini KI generieren';
+      }
+      lucide.createIcons();
+    }
+
+    function updateStep3Summary() {
+      const job = document.getElementById('job-title').value.trim() || 'Projektmanager';
       const company = document.getElementById('job-company').value.trim() || 'Musterfirma GmbH';
-      const notes = document.getElementById('notes-text').value.trim();
       const docs = getVaultDocuments();
 
-      const jobEl = document.getElementById('wiz-summary-job');
-      const notesEl = document.getElementById('wiz-summary-notes');
-      const vaultEl = document.getElementById('wiz-summary-vault');
-      if (jobEl) jobEl.textContent = `${jobTitle} bei ${company}`;
-      if (notesEl) notesEl.textContent = notes ? `${notes.slice(0, 90)}${notes.length > 90 ? '…' : ''}` : 'Keine zusätzlichen Notizen eingetragen';
-      if (vaultEl) vaultEl.textContent = `${docs.length} hinterlegte Dokument${docs.length === 1 ? '' : 'e'}`;
+      const jobEl = document.getElementById('wiz-job-summary');
+      const compEl = document.getElementById('wiz-company-summary');
+      const vaultEl = document.getElementById('wiz-vault-summary');
+      if (jobEl) jobEl.textContent = job;
+      if (compEl) compEl.textContent = company;
+      if (vaultEl) vaultEl.textContent = `${docs.length} Dokument${docs.length === 1 ? '' : 'e'} aktiv`;
     }
 
     function syncJobPreview() {
@@ -891,22 +943,21 @@
       if (saved) {
         try {
           const data = JSON.parse(saved);
-          document.getElementById('prof-firstname').value = data.firstName || 'Max';
-          document.getElementById('prof-lastname').value = data.lastName || 'Mustermann';
-          document.getElementById('prof-email').value = data.email || 'max@beispiel.de';
-          document.getElementById('prof-phone').value = data.phone || '0170 1234567';
-          document.getElementById('prof-street').value = data.street || 'Musterstraße 12';
-          document.getElementById('prof-city').value = data.city || '10115 Berlin';
-          document.getElementById('prof-skills').value = data.skills || 'Projektmanagement, Teamleitung';
-          document.getElementById('prof-experience').value = data.experience || 'Projektmanager bei Beispiel AG';
-          document.getElementById('prof-about').value = data.about || 'Motivierter Teamplayer';
+          if (data.firstName) document.getElementById('prof-firstname').value = data.firstName;
+          if (data.lastName) document.getElementById('prof-lastname').value = data.lastName;
+          if (data.email) document.getElementById('prof-email').value = data.email;
+          if (data.phone) document.getElementById('prof-phone').value = data.phone;
+          if (data.street) document.getElementById('prof-street').value = data.street;
+          if (data.city) document.getElementById('prof-city').value = data.city;
+          if (data.skills) document.getElementById('prof-skills').value = data.skills;
+          if (data.experience) document.getElementById('prof-experience').value = data.experience;
+          if (data.about) document.getElementById('prof-about').value = data.about;
         } catch(e) {}
       }
       updateProfileDisplay();
     }
 
-    function saveProfileData(e) {
-      if (e) e.preventDefault();
+    function saveProfileData() {
       const profile = {
         firstName: document.getElementById('prof-firstname').value,
         lastName: document.getElementById('prof-lastname').value,
@@ -916,12 +967,11 @@
         city: document.getElementById('prof-city').value,
         skills: document.getElementById('prof-skills').value,
         experience: document.getElementById('prof-experience').value,
-        about: document.getElementById('prof-about').value,
+        about: document.getElementById('prof-about').value
       };
       localStorage.setItem('bewerber_profile', JSON.stringify(profile));
       updateProfileDisplay();
-      showToast('Profil erfolgreich gespeichert!', 'success');
-      switchTab('create');
+      showToast('Profildaten gespeichert.', 'success');
     }
 
     function updateProfileDisplay() {
@@ -934,23 +984,18 @@
       const sk = document.getElementById('prof-skills').value;
       const ex = document.getElementById('prof-experience').value;
 
-      document.getElementById('sum-name').textContent = `${fn} ${ln}`;
-      document.getElementById('sum-contact').textContent = `${em} | ${ph}`;
-      document.getElementById('sum-address').textContent = `${st}, ${ci}`;
-      document.getElementById('sum-skills').textContent = sk || 'Keine angegeben';
-      document.getElementById('sum-exp').textContent = ex.split('\n')[0] || 'Keine angegeben';
+      const pPreview = document.getElementById('vault-profile-preview');
+      const ePreview = document.getElementById('vault-exp-preview');
+      const sPreview = document.getElementById('vault-skills-preview');
+      if (pPreview) pPreview.textContent = `${fn} ${ln} • ${em}`;
+      if (ePreview) ePreview.textContent = ex ? ex.split('\n')[0] : 'Keine Berufserfahrung hinterlegt';
+      if (sPreview) sPreview.textContent = sk ? sk.slice(0, 50) + (sk.length > 50 ? '…' : '') : 'Keine Fähigkeiten hinterlegt';
 
       document.getElementById('preview-sender-name').textContent = `${fn} ${ln}`;
       document.getElementById('preview-sender-address').textContent = `${st} • ${ci}`;
       document.getElementById('preview-sender-contact').textContent = `E-Mail: ${em} • Tel: ${ph}`;
       document.getElementById('preview-mini-sender').textContent = `${fn} ${ln} • ${st} • ${ci}`;
       document.getElementById('preview-sign-name').textContent = `${fn} ${ln}`;
-
-      const docs = getVaultDocuments();
-      const sumVault = document.getElementById('sum-vault-docs');
-      if (sumVault) {
-        sumVault.textContent = `${docs.length} Dokument${docs.length === 1 ? '' : 'e'} gespeichert`;
-      }
     }
 
     // Daten-Tresor Management
@@ -967,7 +1012,6 @@
     function persistVaultDocuments(docs) {
       localStorage.setItem('bewerber_vault_docs', JSON.stringify(docs));
       renderVaultDocuments();
-      updateProfileDisplay();
     }
 
     function renderVaultDocuments() {
@@ -978,21 +1022,21 @@
       if (!listEl) return;
 
       if (docs.length === 0) {
-        listEl.innerHTML = `<p class="text-xs text-slate-400 italic py-2 px-3 bg-slate-50 rounded-lg border border-dashed border-slate-200">Noch keine Dokumente im Tresor. Lade ein Foto, eine .txt/.md-Datei oder Text oben hoch.</p>`;
+        listEl.innerHTML = `<p class="text-xs text-slate-500 italic py-2 px-3 bg-[#0b0f19] rounded-xl border border-dashed border-slate-800">Noch keine Dokumente im Tresor gespeichert.</p>`;
         return;
       }
 
       listEl.innerHTML = docs.map(doc => `
-        <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-start justify-between gap-2">
+        <div class="p-3 bg-[#0b0f19] rounded-xl border border-slate-800 flex items-start justify-between gap-2">
           <div class="min-w-0 flex-1">
-            <p class="text-xs font-bold text-slate-800 truncate">${escapeHtml(doc.title || 'Dokument')}</p>
-            <p class="text-[11px] text-slate-400">${escapeHtml(doc.sourceType || 'Text')} • ${escapeHtml(doc.date || '')}</p>
-            <p class="text-xs text-slate-600 mt-1 line-clamp-2">${escapeHtml((doc.content || '').slice(0, 140))}${(doc.content || '').length > 140 ? '…' : ''}</p>
+            <p class="text-xs font-bold text-white truncate">${escapeHtml(doc.title || 'Dokument')}</p>
+            <p class="text-[10px] text-slate-400">${escapeHtml(doc.sourceType || 'Text')} • ${escapeHtml(doc.date || '')}</p>
+            <p class="text-xs text-slate-400 mt-1 line-clamp-2">${escapeHtml((doc.content || '').slice(0, 120))}${(doc.content || '').length > 120 ? '…' : ''}</p>
           </div>
           <div class="flex items-center gap-1 shrink-0">
-            <button type="button" onclick="loadVaultDocToEditor(${Number(doc.id)})" class="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg text-[11px] font-medium transition">Laden</button>
-            <button type="button" onclick="deleteVaultDocument(${Number(doc.id)})" class="p-1 text-slate-400 hover:text-red-500 transition" title="Löschen">
-              <i data-lucide="trash-2" class="w-4 h-4"></i>
+            <button type="button" onclick="loadVaultDocToEditor(${Number(doc.id)})" class="px-2 py-1 bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 rounded-lg text-[10px] font-semibold border border-blue-500/20">Laden</button>
+            <button type="button" onclick="deleteVaultDocument(${Number(doc.id)})" class="p-1 text-slate-500 hover:text-red-400" title="Löschen" aria-label="Löschen">
+              <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
             </button>
           </div>
         </div>
@@ -1000,12 +1044,12 @@
       lucide.createIcons();
     }
 
-    function saveVaultDocument(customSourceType = 'Text / Notiz') {
+    function saveVaultDocumentOnly() {
       const titleInput = document.getElementById('vault-doc-title');
       const textInput = document.getElementById('vault-raw-text');
       const content = textInput.value.trim();
       if (!content) {
-        showToast('Bitte zuerst Text eingeben oder einlesen.', 'error');
+        showToast('Bitte Text eingeben oder hochladen.', 'error');
         return;
       }
       const title = titleInput.value.trim() || `Dokument (${new Date().toLocaleDateString('de-DE')})`;
@@ -1013,12 +1057,12 @@
       docs.unshift({
         id: Date.now(),
         title,
-        sourceType: customSourceType,
+        sourceType: 'Text / Notiz',
         content,
         date: new Date().toLocaleDateString('de-DE')
       });
       persistVaultDocuments(docs);
-      showToast('Dokument im Daten-Tresor gespeichert.', 'success');
+      showToast('Im Daten-Tresor gespeichert.', 'success');
     }
 
     function loadVaultDocToEditor(id) {
@@ -1026,84 +1070,96 @@
       if (!doc) return;
       document.getElementById('vault-doc-title').value = doc.title || '';
       document.getElementById('vault-raw-text').value = doc.content || '';
-      showToast('Dokument in das Textfeld geladen.', 'info');
+      showToast('Dokument in Textfeld geladen.', 'info');
     }
 
     function deleteVaultDocument(id) {
       const docs = getVaultDocuments().filter(d => d.id !== id);
       persistVaultDocuments(docs);
-      showToast('Dokument aus dem Tresor entfernt.', 'info');
+      showToast('Dokument gelöscht.', 'info');
     }
 
-    async function handleVaultImageUpload(event) {
+    async function handleVaultUpload(event, type) {
       const file = event.target.files[0];
       if (!file) return;
-      const box = document.getElementById('vault-ocr-status-box');
-      const status = document.getElementById('vault-ocr-status');
-      box.classList.remove('hidden');
-      box.classList.add('flex');
-      status.textContent = 'Foto wird per OCR eingelesen…';
+
+      const indicator = document.getElementById('vault-status-indicator');
+      const statusText = document.getElementById('vault-status-text');
+      indicator.classList.remove('hidden');
+      indicator.classList.add('flex');
+      statusText.textContent = `${type} wird eingelesen…`;
 
       try {
-        const result = await Tesseract.recognize(file, 'deu+eng', {
-          logger: m => {
-            if (m.status === 'recognizing text') {
-              status.textContent = `OCR Texterkennung: ${Math.round(m.progress * 100)}%`;
+        if (file.type.startsWith('image/')) {
+          const result = await Tesseract.recognize(file, 'deu+eng', {
+            logger: m => {
+              if (m.status === 'recognizing text') {
+                statusText.textContent = `Texterkennung: ${Math.round(m.progress * 100)}%`;
+              }
             }
+          });
+          const text = result.data.text.trim();
+          if (text) {
+            const rawEl = document.getElementById('vault-raw-text');
+            rawEl.value = rawEl.value.trim() ? `${rawEl.value.trim()}\n\n${text}` : text;
+            const titleEl = document.getElementById('vault-doc-title');
+            if (!titleEl.value.trim()) titleEl.value = file.name.replace(/\.[^.]+$/, '');
+            showToast(`${type} erfolgreich erkannt!`, 'success');
+          } else {
+            showToast('Kein Text auf dem Bild erkannt.', 'error');
           }
-        });
-        const text = result.data.text.trim();
-        if (text) {
-          const titleEl = document.getElementById('vault-doc-title');
-          if (!titleEl.value.trim()) titleEl.value = file.name.replace(/\.[^.]+$/, '');
+        } else {
+          // Textdatei (.txt / .md)
+          const text = await file.text();
           const rawEl = document.getElementById('vault-raw-text');
           rawEl.value = rawEl.value.trim() ? `${rawEl.value.trim()}\n\n${text}` : text;
-          showToast('Bildtext in den Smart-Import übernommen.', 'success');
-        } else {
-          showToast('Kein lesbarer Text auf dem Bild erkannt.', 'error');
+          const titleEl = document.getElementById('vault-doc-title');
+          if (!titleEl.value.trim()) titleEl.value = file.name.replace(/\.[^.]+$/, '');
+          showToast('Textdatei geladen.', 'success');
         }
       } catch (err) {
-        console.error(err);
-        showToast('Fehler beim OCR-Import: ' + err.message, 'error');
+        showToast('Fehler beim Einlesen: ' + err.message, 'error');
       } finally {
-        box.classList.add('hidden');
-        box.classList.remove('flex');
+        indicator.classList.add('hidden');
+        indicator.classList.remove('flex');
         event.target.value = '';
       }
     }
 
-    function handleVaultTextFileUpload(event) {
-      const file = event.target.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = () => {
-        const text = String(reader.result || '').trim();
-        if (!text) {
-          showToast('Die Datei enthält keinen lesbaren Text.', 'error');
-          return;
-        }
-        const titleEl = document.getElementById('vault-doc-title');
-        if (!titleEl.value.trim()) titleEl.value = file.name.replace(/\.[^.]+$/, '');
-        const rawEl = document.getElementById('vault-raw-text');
-        rawEl.value = rawEl.value.trim() ? `${rawEl.value.trim()}\n\n${text}` : text;
-        showToast('Textdatei in den Smart-Import geladen.', 'success');
-      };
-      reader.onerror = () => showToast('Datei konnte nicht gelesen werden.', 'error');
-      reader.readAsText(file, 'UTF-8');
-      event.target.value = '';
-    }
+    async function extractVaultToProfile() {
+      const raw = document.getElementById('vault-raw-text').value.trim();
+      if (!raw) {
+        showToast('Bitte zuerst Text eingeben oder hochladen.', 'error');
+        return;
+      }
 
-    function parseVaultTextLocally(raw) {
-      const emailMatch = raw.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
-      const phoneMatch = raw.match(/(?:\+?\d{1,3}[\s/-]?)?(?:\(0\)|0)?[\d\s/-]{7,16}\d/);
-      const cityMatch = raw.match(/\b\d{5}\s+[A-ZÄÖÜ][A-Za-zÄÖÜäöüß\- ]{1,35}/);
-      const streetMatch = raw.match(/[A-ZÄÖÜ][A-Za-zÄÖÜäöüß\-.\s]{2,40}(?:straße|strasse|str\.|weg|allee|platz|ring|damm|gasse)\s*\d+[a-zA-Z]?/i);
-      return {
-        email: emailMatch ? emailMatch[0].trim() : '',
-        phone: phoneMatch ? phoneMatch[0].trim() : '',
-        city: cityMatch ? cityMatch[0].trim() : '',
-        street: streetMatch ? streetMatch[0].trim() : ''
-      };
+      const btn = document.getElementById('btn-vault-extract');
+      const originalHtml = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = `<span class="animate-spin inline-block mr-1">⏳</span> KI wertet Daten aus…`;
+
+      const prompt = `Extrahiere strukturierte Bewerberdaten aus folgendem Rohtext (Lebenslauf, Anschreiben, Zeugnis oder Notiz). Gib NUR gültiges JSON ohne Markdown-Codeblock zurück mit genau diesen Schlüsseln (leerer String falls nicht vorhanden):
+{"firstName":"","lastName":"","email":"","phone":"","street":"","city":"","skills":"","experience":"","about":""}
+
+Rohtext:
+${raw.slice(0, 8000)}`;
+
+      try {
+        const jsonText = await callGeminiApi(prompt, true);
+        const cleaned = jsonText.replace(/^```json\s*/i, '').replace(/```$/i, '').trim();
+        const parsed = JSON.parse(cleaned);
+        const count = applyExtractedToProfile(parsed);
+        saveVaultDocumentOnly();
+        showToast(`KI-Auswertung: ${count} Profilfeld(er) aktualisiert.`, 'success');
+      } catch (err) {
+        console.warn(err);
+        saveVaultDocumentOnly();
+        showToast('Dokument im Tresor gesichert. Manuelle Profilanpassung aktiv.', 'info');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalHtml;
+        lucide.createIcons();
+      }
     }
 
     function applyExtractedToProfile(extracted) {
@@ -1127,121 +1183,44 @@
         }
       });
       if (updated > 0) {
-        const profile = {
-          firstName: document.getElementById('prof-firstname').value,
-          lastName: document.getElementById('prof-lastname').value,
-          email: document.getElementById('prof-email').value,
-          phone: document.getElementById('prof-phone').value,
-          street: document.getElementById('prof-street').value,
-          city: document.getElementById('prof-city').value,
-          skills: document.getElementById('prof-skills').value,
-          experience: document.getElementById('prof-experience').value,
-          about: document.getElementById('prof-about').value
-        };
-        localStorage.setItem('bewerber_profile', JSON.stringify(profile));
-        updateProfileDisplay();
+        saveProfileData();
       }
       return updated;
     }
 
-    async function extractVaultToProfile() {
-      const raw = document.getElementById('vault-raw-text').value.trim();
-      if (!raw) {
-        showToast('Bitte zuerst Text einfügen oder einlesen.', 'error');
-        return;
-      }
-
-      const btn = document.getElementById('btn-vault-extract');
-      const originalHtml = btn.innerHTML;
-      btn.disabled = true;
-      btn.innerHTML = `<span class="animate-spin inline-block mr-1">⏳</span> Werte Daten aus…`;
-
-      const apiKey = getApiKey();
-      try {
-        if (apiKey) {
-          const prompt = `Extrahiere strukturierte Bewerberdaten aus folgendem Rohtext (Lebenslauf, Anschreiben, Zeugnis oder Notiz). Gib NUR gültiges JSON ohne Markdown-Codeblock zurück mit genau diesen Schlüsseln (leerer String falls nicht vorhanden):
-{"firstName":"","lastName":"","email":"","phone":"","street":"","city":"","skills":"","experience":"","about":""}
-
-Rohtext:
-${raw.slice(0, 8000)}`;
-
-          const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${encodeURIComponent(apiKey)}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              contents: [{ parts: [{ text: prompt }] }],
-              generationConfig: { responseMimeType: 'application/json' }
-            })
-          });
-          const data = await response.json();
-          if (!response.ok) {
-            throw new Error(data.error?.message || `HTTP ${response.status}`);
-          }
-          const jsonText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-          const cleaned = jsonText.replace(/^```json\s*/i, '').replace(/```$/i, '').trim();
-          const parsed = JSON.parse(cleaned);
-          const count = applyExtractedToProfile(parsed);
-          showToast(`KI-Import: ${count} Profilfeld(er) aktualisiert.`, count > 0 ? 'success' : 'info');
-        } else {
-          const localParsed = parseVaultTextLocally(raw);
-          const count = applyExtractedToProfile(localParsed);
-          showToast(
-            count > 0
-              ? `Lokaler Parser (kein API-Key gesetzt): ${count} Kontaktfeld(er) übernommen.`
-              : 'Kein API-Key gesetzt & keine E-Mail/Adresse erkannt. Bitte Dokument im Tresor speichern oder KI-Key hinterlegen.',
-            count > 0 ? 'info' : 'error'
-          );
-        }
-      } catch (err) {
-        console.warn('Vault extraction error:', err);
-        const localParsed = parseVaultTextLocally(raw);
-        const count = applyExtractedToProfile(localParsed);
-        showToast(`KI-Auslese fehlgeschlagen (${err.message}) – lokal ${count} Feld(er) erkannt.`, 'info');
-      } finally {
-        btn.disabled = false;
-        btn.innerHTML = originalHtml;
-        lucide.createIcons();
-      }
-    }
-
-    // OCR via Tesseract.js in the browser
+    // OCR via Tesseract.js (Screen 2)
     async function handleImageOcr(event) {
       const file = event.target.files[0];
       if (!file) return;
 
-      const idle = document.getElementById('ocr-idle');
       const loading = document.getElementById('ocr-loading');
       const status = document.getElementById('ocr-status');
-
-      idle.classList.add('hidden');
-      idle.classList.remove('flex');
       loading.classList.remove('hidden');
       loading.classList.add('flex');
-      status.textContent = 'Analysiere Handschrift/Text…';
+      status.textContent = 'Erkenne Text per OCR…';
 
       try {
         const result = await Tesseract.recognize(file, 'deu+eng', {
           logger: m => {
             if (m.status === 'recognizing text') {
-              status.textContent = `Erkenne Text: ${Math.round(m.progress * 100)}%`;
+              status.textContent = `Erkenne Handschrift: ${Math.round(m.progress * 100)}%`;
             }
           }
         });
-
         const text = result.data.text.trim();
         if (text) {
           const current = document.getElementById('notes-text').value.trim();
-          document.getElementById('notes-text').value = current ? `${current}\n\n${text}` : text;
+          const combined = current ? `${current}\n\n${text}` : text;
+          document.getElementById('notes-text').value = combined;
+          const step2El = document.getElementById('notes-text-step2');
+          if (step2El) step2El.value = combined;
           showToast('Notizen erfolgreich erkannt!', 'success');
         } else {
-          showToast('Kein Text auf dem Bild erkannt. Bitte auf gute Beleuchtung achten.', 'error');
+          showToast('Kein Text erkannt. Bitte auf gute Ausleuchtung achten.', 'error');
         }
       } catch (err) {
-        console.error(err);
-        showToast('Fehler bei der Texterkennung: ' + err.message, 'error');
+        showToast('OCR-Fehler: ' + err.message, 'error');
       } finally {
-        idle.classList.remove('hidden');
-        idle.classList.add('flex');
         loading.classList.add('hidden');
         loading.classList.remove('flex');
         event.target.value = '';
@@ -1250,9 +1229,11 @@ ${raw.slice(0, 8000)}`;
 
     function clearNotes() {
       document.getElementById('notes-text').value = '';
+      const step2El = document.getElementById('notes-text-step2');
+      if (step2El) step2El.value = '';
     }
 
-    // Gemini API & Generation Logic
+    // Gemini API Wrapper (Client-Key -> Netlify Serverless Proxy -> Smart Fallback)
     function getApiKey() {
       return localStorage.getItem('gemini_user_api_key') || '';
     }
@@ -1274,7 +1255,7 @@ ${raw.slice(0, 8000)}`;
       const key = document.getElementById('user-gemini-key').value.trim();
       if (key) {
         localStorage.setItem('gemini_user_api_key', key);
-        document.getElementById('api-status-text').textContent = 'KI-Modus: Eigener Key';
+        document.getElementById('api-status-text').textContent = 'KI: Eigener Key';
         showToast('API-Schlüssel gespeichert.', 'success');
       }
       closeApiKeyModal();
@@ -1288,6 +1269,40 @@ ${raw.slice(0, 8000)}`;
       closeApiKeyModal();
     }
 
+    async function callGeminiApi(prompt, isJson = false) {
+      const apiKey = getApiKey();
+      if (apiKey) {
+        const body = { contents: [{ parts: [{ text: prompt }] }] };
+        if (isJson) body.generationConfig = { responseMimeType: 'application/json' };
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${encodeURIComponent(apiKey)}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error?.message || `HTTP ${response.status}`);
+        return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      }
+
+      // Netlify Serverless Proxy Fallback
+      try {
+        const res = await fetch('/.netlify/functions/gemini', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt, responseMimeType: isJson ? 'application/json' : undefined })
+        });
+        if (res.ok) {
+          const proxyData = await res.json();
+          if (proxyData.text) return proxyData.text;
+        }
+      } catch (e) {
+        console.warn('Netlify function not available:', e);
+      }
+
+      throw new Error('Kein API-Key konfiguriert.');
+    }
+
+    // Cover Letter Generation
     async function generateCoverLetter(isImprovement) {
       const jobTitle = document.getElementById('job-title').value.trim() || 'Projektmanager';
       const company = document.getElementById('job-company').value.trim() || 'Musterfirma GmbH';
@@ -1295,13 +1310,8 @@ ${raw.slice(0, 8000)}`;
       const recStreet = document.getElementById('job-recipient-street').value.trim();
       const recCity = document.getElementById('job-recipient-city').value.trim();
       const jobDesc = document.getElementById('job-description').value.trim();
-      const notes = document.getElementById('notes-text').value.trim();
-      const existingDraft = document.getElementById('existing-letter-text').value.trim() || document.getElementById('preview-body').innerText.trim();
-
-      if (isImprovement && !existingDraft) {
-        showToast('Bitte füge zuerst ein bestehendes Anschreiben ein.', 'error');
-        return;
-      }
+      const notes = (document.getElementById('notes-text-step2').value || document.getElementById('notes-text').value).trim();
+      const existingDraft = document.getElementById('existing-letter-text').value.trim();
 
       const fn = document.getElementById('prof-firstname').value;
       const ln = document.getElementById('prof-lastname').value;
@@ -1319,17 +1329,14 @@ ${raw.slice(0, 8000)}`;
       if (recCity) document.getElementById('preview-recipient-city').textContent = recCity;
       document.getElementById('preview-subject').textContent = `Bewerbung als ${jobTitle}`;
 
-      const btn = isImprovement ? document.getElementById('btn-improve') : document.getElementById('btn-generate');
+      const btn = document.getElementById('btn-generate');
       const originalText = btn.innerHTML;
-      btn.innerHTML = `<span class="animate-spin inline-block mr-2">⏳</span> KI schreibt Anschreiben…`;
+      btn.innerHTML = `<span class="animate-spin inline-block mr-2">⏳</span> KI formuliert Anschreiben…`;
       btn.disabled = true;
 
-      const apiKey = getApiKey();
-
       try {
-        if (apiKey) {
-          const prompt = isImprovement
-            ? `Verbessere und professionalisiere das folgende bestehende Anschreiben auf Deutsch nach DIN 5008.
+        const prompt = isImprovement
+          ? `Verbessere und professionalisiere das folgende bestehende Anschreiben auf Deutsch nach DIN 5008.
 Bestehendes Anschreiben:
 ${existingDraft}
 
@@ -1341,8 +1348,8 @@ Hinterlegte Dokumente aus Daten-Tresor: ${vaultContext}
 Stellenanzeige: Position "${jobTitle}" bei "${company}". Details: ${jobDesc}
 Ergänzende Notizen: ${notes || 'Keine'}
 
-Gib NUR den verbesserten Textkörper zurück (Anrede bis Grußformel, 3 bis 4 Absätze).`
-            : `Erstelle ein professionelles, maßgeschneidertes Anschreiben für eine Bewerbung auf Deutsch nach DIN 5008.
+Gib NUR den verbesserten Textkörper zurück (Anrede bis Grußformel, 3 bis 4 Absätze). Kein Begleittext.`
+          : `Erstelle ein professionelles, maßgeschneidertes Anschreiben für eine Bewerbung auf Deutsch nach DIN 5008.
 Bewerber: ${fn} ${ln}
 Fähigkeiten: ${skills}
 Berufserfahrung: ${experience}
@@ -1352,41 +1359,18 @@ Stellenanzeige: Position "${jobTitle}" bei "${company}". Details: ${jobDesc}
 Handschriftliche Notizen & Kernmotivation: ${notes || 'Keine extra Notizen'}
 
 Formatierungs-Vorgaben:
-Gib NUR den Textkörper des Anschreibens zurück (beginnend mit der Anrede 'Sehr geehrte Damen und Herren,' oder spezifischer Anrede, gefolgt von Einleitung, Hauptteil, Bezug zu den Notizen/Stärken, Schlusssatz und Grußformel). Formatiere in 3 bis 4 Absätzen.`;
+Gib NUR den Textkörper des Anschreibens zurück (beginnend mit der Anrede 'Sehr geehrte Damen und Herren,' oder spezifischer Anrede, gefolgt von Einleitung, Hauptteil, Bezug zu den Notizen/Stärken, Schlusssatz und Grußformel). Formatiere in 3 bis 4 Absätzen. Kein Begleittext.`;
 
-          const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${encodeURIComponent(apiKey)}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              contents: [{ parts: [{ text: prompt }] }]
-            })
-          });
-
-          const data = await response.json();
-          if (!response.ok) {
-            throw new Error(data.error?.message || `HTTP ${response.status}`);
-          }
-          const generatedText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-          if (generatedText) {
-            setPreviewText(generatedText);
-            showToast('Anschreiben mit Gemini KI erstellt!', 'success');
-          } else {
-            throw new Error('Keine Antwort von Gemini API erhalten.');
-          }
-        } else {
-          await new Promise(r => setTimeout(r, 500));
-          const generated = createSmartLetterText(fn, ln, jobTitle, company, jobDesc, notes, skills, experience, about, isImprovement ? existingDraft : '');
-          setPreviewText(generated);
-          showToast('Anschreiben erstellt!', 'success');
-        }
-
-        switchTab('editor');
+        const generatedText = await callGeminiApi(prompt, false);
+        setPreviewText(generatedText);
+        showToast('Anschreiben mit Gemini KI erstellt!', 'success');
+        setEditorStep(4);
       } catch (err) {
-        console.warn('API call failed, falling back to smart generation:', err);
+        console.warn('API fallback to smart generator:', err);
         const generated = createSmartLetterText(fn, ln, jobTitle, company, jobDesc, notes, skills, experience, about, isImprovement ? existingDraft : '');
         setPreviewText(generated);
-        showToast(`Gemini API Hinweis (${err.message}) – lokaler Entwurf erstellt.`, 'info');
-        switchTab('editor');
+        showToast('Anschreiben mit intelligentem Generator erstellt.', 'info');
+        setEditorStep(4);
       } finally {
         btn.innerHTML = originalText;
         btn.disabled = false;
@@ -1434,14 +1418,13 @@ ${fn} ${ln}`;
       document.getElementById('preview-body').innerHTML = formatted;
     }
 
-    // Template Styling
     function updateTemplateStyle() {
       const val = document.getElementById('template-select').value;
       const header = document.getElementById('letter-header-container');
       const subject = document.getElementById('preview-subject');
 
       if (val === 'modern') {
-        header.className = 'border-l-4 border-blue-600 pl-4 pb-4 mb-6 bg-slate-50/50 p-3 rounded-r';
+        header.className = 'border-l-4 border-blue-600 pl-4 pb-4 mb-6 bg-slate-50 p-3 rounded-r';
         subject.className = 'font-bold text-base text-blue-700';
       } else if (val === 'elegant') {
         header.className = 'border-b pb-4 mb-6 border-slate-300';
@@ -1452,219 +1435,38 @@ ${fn} ${ln}`;
       }
     }
 
-    // Copy to clipboard
+    function downloadPdfDirectly() {
+      const element = document.getElementById('print-letter');
+      const jobTitle = document.getElementById('job-title').value.trim() || 'Bewerbung';
+      const company = document.getElementById('job-company').value.trim() || 'Unternehmen';
+      const filename = `Bewerbung_${jobTitle.replace(/[^a-zA-Z0-9_-]/g, '_')}_${company.replace(/[^a-zA-Z0-9_-]/g, '_')}.pdf`;
+
+      showToast('PDF wird generiert…', 'info');
+      const opt = {
+        margin: [10, 10, 10, 10],
+        filename: filename,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
+
+      html2pdf().set(opt).from(element).save().then(() => {
+        showToast('PDF erfolgreich heruntergeladen!', 'success');
+      }).catch(err => {
+        console.error(err);
+        window.print();
+      });
+    }
+
     function copyToClipboard() {
       const text = document.getElementById('preview-body').innerText;
       navigator.clipboard.writeText(text).then(() => {
         showToast('Anschreiben in die Zwischenablage kopiert!', 'success');
       }).catch(() => {
-        showToast('Kopieren fehlgeschlagen – bitte Text manuell markieren.', 'error');
+        showToast('Kopieren fehlgeschlagen.', 'error');
       });
     }
 
-    // Attachments Management (Anlagen)
-    const SUGGESTED_ATTACHMENTS = [
-      'Lebenslauf',
-      'Zeugnisse',
-      'Arbeitszeugnisse',
-      'Abschlusszeugnis',
-      'Zertifikate',
-      'Referenzen',
-      'Arbeitsproben'
-    ];
-    let attachmentsList = ['Lebenslauf', 'Zeugnisse'];
-    let editingAttachmentIndex = -1;
-
-    function loadAttachments() {
-      try {
-        const stored = localStorage.getItem('bewerber_attachments');
-        if (stored !== null) {
-          const parsed = JSON.parse(stored);
-          if (Array.isArray(parsed)) {
-            attachmentsList = parsed.map(x => String(x).trim()).filter(Boolean);
-          }
-        }
-      } catch (e) {
-        console.warn('Could not load attachments:', e);
-      }
-      renderAttachments();
-    }
-
-    function persistAttachments() {
-      localStorage.setItem('bewerber_attachments', JSON.stringify(attachmentsList));
-    }
-
-    function addCustomAttachment() {
-      const input = document.getElementById('new-attachment-input');
-      const value = input.value.trim();
-      if (!value) return;
-
-      const exists = attachmentsList.some(item => item.toLowerCase() === value.toLowerCase());
-      if (exists) {
-        showToast('Diese Anlage ist bereits vorhanden.', 'info');
-        return;
-      }
-
-      attachmentsList.push(value);
-      input.value = '';
-      editingAttachmentIndex = -1;
-      persistAttachments();
-      renderAttachments();
-    }
-
-    function toggleSuggestedAttachment(label) {
-      const idx = attachmentsList.findIndex(item => item.toLowerCase() === label.toLowerCase());
-      if (idx >= 0) {
-        attachmentsList.splice(idx, 1);
-      } else {
-        attachmentsList.push(label);
-      }
-      editingAttachmentIndex = -1;
-      persistAttachments();
-      renderAttachments();
-    }
-
-    function moveAttachment(index, delta) {
-      const target = index + delta;
-      if (target < 0 || target >= attachmentsList.length) return;
-      const copy = [...attachmentsList];
-      const [moved] = copy.splice(index, 1);
-      copy.splice(target, 0, moved);
-      attachmentsList = copy;
-      editingAttachmentIndex = -1;
-      persistAttachments();
-      renderAttachments();
-    }
-
-    function removeAttachment(index) {
-      if (index < 0 || index >= attachmentsList.length) return;
-      attachmentsList.splice(index, 1);
-      editingAttachmentIndex = -1;
-      persistAttachments();
-      renderAttachments();
-    }
-
-    function startEditAttachment(index) {
-      editingAttachmentIndex = index;
-      renderAttachments();
-      const editInput = document.getElementById(`edit-attachment-input-${index}`);
-      if (editInput) {
-        editInput.focus();
-        editInput.select();
-      }
-    }
-
-    function cancelEditAttachment() {
-      editingAttachmentIndex = -1;
-      renderAttachments();
-    }
-
-    function saveEditAttachment(index) {
-      const editInput = document.getElementById(`edit-attachment-input-${index}`);
-      if (!editInput) return;
-      const newVal = editInput.value.trim();
-      if (!newVal) {
-        showToast('Name der Anlage darf nicht leer sein.', 'error');
-        return;
-      }
-      const duplicate = attachmentsList.some((item, i) => i !== index && item.toLowerCase() === newVal.toLowerCase());
-      if (duplicate) {
-        showToast('Diese Anlage existiert bereits.', 'info');
-        return;
-      }
-      attachmentsList[index] = newVal;
-      editingAttachmentIndex = -1;
-      persistAttachments();
-      renderAttachments();
-    }
-
-    function renderAttachments() {
-      const listContainer = document.getElementById('attachments-list-container');
-      const suggestionsContainer = document.getElementById('attachment-suggestions');
-      const previewEl = document.getElementById('preview-attachments');
-      const countBadge = document.getElementById('attachments-count-badge');
-
-      if (countBadge) {
-        countBadge.textContent = `${attachmentsList.length} ausgewählt`;
-      }
-
-      if (previewEl) {
-        if (attachmentsList.length === 0) {
-          previewEl.textContent = '';
-          previewEl.classList.add('hidden');
-        } else {
-          previewEl.textContent = `Anlagen: ${attachmentsList.join(', ')}`;
-          previewEl.classList.remove('hidden');
-        }
-      }
-
-      if (listContainer) {
-        if (attachmentsList.length === 0) {
-          listContainer.innerHTML = `<p class="text-xs text-slate-400 italic py-2 px-3 bg-slate-50 rounded-lg border border-dashed border-slate-200">Keine Anlagen ausgewählt – die Zeile „Anlagen:“ wird in der Vorschau und im PDF ausgeblendet.</p>`;
-        } else {
-          listContainer.innerHTML = attachmentsList.map((item, idx) => {
-            if (idx === editingAttachmentIndex) {
-              return `
-                <div class="flex items-center gap-2 p-2 bg-blue-50/70 rounded-lg border border-blue-200">
-                  <input
-                    type="text"
-                    id="edit-attachment-input-${idx}"
-                    value="${escapeHtml(item)}"
-                    onkeydown="if(event.key==='Enter'){event.preventDefault();saveEditAttachment(${idx});}else if(event.key==='Escape'){cancelEditAttachment();}"
-                    class="flex-1 text-xs px-2.5 py-1.5 rounded-md border border-blue-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                  <button type="button" onclick="saveEditAttachment(${idx})" title="Speichern" class="px-2.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-md transition">OK</button>
-                  <button type="button" onclick="cancelEditAttachment()" title="Abbrechen" class="px-2 py-1.5 bg-white hover:bg-slate-100 text-slate-600 text-xs font-medium rounded-md border border-slate-200 transition">Abbrechen</button>
-                </div>
-              `;
-            }
-            return `
-              <div class="flex items-center justify-between gap-2 px-3 py-2 bg-slate-50 rounded-lg border border-slate-200">
-                <div class="flex items-center gap-2 min-w-0">
-                  <span class="text-[11px] font-bold text-slate-400 w-5 text-center">${idx + 1}.</span>
-                  <span class="text-xs font-medium text-slate-800 truncate">${escapeHtml(item)}</span>
-                </div>
-                <div class="flex items-center gap-1 shrink-0">
-                  <button type="button" onclick="moveAttachment(${idx}, -1)" ${idx === 0 ? 'disabled' : ''} title="Nach oben" class="p-1 rounded text-slate-500 hover:bg-slate-200 disabled:opacity-30 disabled:pointer-events-none transition">
-                    <i data-lucide="chevron-up" class="w-3.5 h-3.5"></i>
-                  </button>
-                  <button type="button" onclick="moveAttachment(${idx}, 1)" ${idx === attachmentsList.length - 1 ? 'disabled' : ''} title="Nach unten" class="p-1 rounded text-slate-500 hover:bg-slate-200 disabled:opacity-30 disabled:pointer-events-none transition">
-                    <i data-lucide="chevron-down" class="w-3.5 h-3.5"></i>
-                  </button>
-                  <button type="button" onclick="startEditAttachment(${idx})" title="Umbenennen" class="p-1 rounded text-slate-500 hover:text-blue-600 hover:bg-blue-50 transition">
-                    <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
-                  </button>
-                  <button type="button" onclick="removeAttachment(${idx})" title="Entfernen" class="p-1 rounded text-slate-400 hover:text-red-600 hover:bg-red-50 transition">
-                    <i data-lucide="x" class="w-3.5 h-3.5"></i>
-                  </button>
-                </div>
-              </div>
-            `;
-          }).join('');
-        }
-      }
-
-      if (suggestionsContainer) {
-        suggestionsContainer.innerHTML = SUGGESTED_ATTACHMENTS.map(label => {
-          const active = attachmentsList.some(item => item.toLowerCase() === label.toLowerCase());
-          const classes = active
-            ? 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700'
-            : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200';
-          return `
-            <button type="button" onclick="toggleSuggestedAttachment('${escapeHtml(label)}')" class="px-2.5 py-1 rounded-full text-xs font-medium border flex items-center gap-1 transition ${classes}">
-              <i data-lucide="${active ? 'check' : 'plus'}" class="w-3 h-3"></i>
-              ${escapeHtml(label)}
-            </button>
-          `;
-        }).join('');
-      }
-
-      lucide.createIcons();
-    }
-
-    let currentLetterStatus = 'Entwurf';
-
-    // Save & History
     function saveCurrentLetter() {
       const subject = document.getElementById('preview-subject').textContent;
       const body = document.getElementById('preview-body').innerHTML;
@@ -1681,77 +1483,48 @@ ${fn} ${ln}`;
         subject,
         body,
         date,
-        attachments: [...attachmentsList],
         recipient,
-        status: currentLetterStatus || 'Entwurf'
+        status: 'Entwurf'
       };
       const list = JSON.parse(localStorage.getItem('saved_letters') || '[]');
       list.unshift(item);
       localStorage.setItem('saved_letters', JSON.stringify(list));
       renderHistory();
-      showToast('Anschreiben im Archiv gespeichert!', 'success');
-    }
-
-    function updateHistoryStatus(id, newStatus) {
-      const list = JSON.parse(localStorage.getItem('saved_letters') || '[]');
-      const idx = list.findIndex(x => x.id === id);
-      if (idx >= 0) {
-        list[idx].status = newStatus;
-        localStorage.setItem('saved_letters', JSON.stringify(list));
-        renderHistory();
-        showToast(`Status aktualisiert: ${newStatus}`, 'info');
-      }
+      showToast('Anschreiben im Verlauf gespeichert!', 'success');
     }
 
     function renderHistory() {
       const list = JSON.parse(localStorage.getItem('saved_letters') || '[]');
       const container = document.getElementById('history-list');
       const count = document.getElementById('history-count');
-      count.textContent = `${list.length} Dokumente`;
+      if (count) count.textContent = `${list.length} Dokumente`;
+      if (!container) return;
 
       if (list.length === 0) {
-        container.innerHTML = `<p class="text-xs text-slate-400 py-6 text-center">Noch keine Anschreiben gespeichert. Erstelle ein Anschreiben und klicke auf "Speichern".</p>`;
+        container.innerHTML = `<p class="text-xs text-slate-500 py-6 text-center">Noch keine Anschreiben gespeichert.</p>`;
         return;
       }
 
-      const statuses = ['Entwurf', 'Abgeschickt', 'Einladung', 'Absage'];
-
-      container.innerHTML = list.map(item => {
-        const currentStatus = item.status || 'Entwurf';
-        const companyLine = item.recipient && item.recipient.company
-          ? `<p class="text-[11px] font-medium text-blue-700 mt-0.5">${escapeHtml(item.recipient.company)}${item.recipient.person ? ` • ${escapeHtml(item.recipient.person)}` : ''}</p>`
-          : '';
-        const attachmentsText = Array.isArray(item.attachments) && item.attachments.length > 0
-          ? `<p class="text-[11px] text-slate-500 mt-0.5">Anlagen: ${escapeHtml(item.attachments.join(', '))}</p>`
-          : '';
-        const statusOptions = statuses.map(s => `<option value="${s}" ${s === currentStatus ? 'selected' : ''}>${s}</option>`).join('');
-        return `
-        <div class="p-3 bg-slate-50 hover:bg-slate-100/80 rounded-xl border border-slate-200 flex flex-wrap items-center justify-between gap-2 transition">
+      container.innerHTML = list.map(item => `
+        <div class="p-3 bg-[#0b0f19] rounded-xl border border-slate-800 flex items-center justify-between gap-2">
           <div class="min-w-0 flex-1">
-            <h4 class="font-semibold text-slate-800 text-sm truncate">${escapeHtml(item.subject)}</h4>
-            <p class="text-xs text-slate-500">Erstellt am ${escapeHtml(item.date)}</p>
-            ${companyLine}
-            ${attachmentsText}
+            <h4 class="font-semibold text-white text-xs sm:text-sm truncate">${escapeHtml(item.subject)}</h4>
+            <p class="text-[11px] text-slate-400">${escapeHtml(item.date)} • ${escapeHtml(item.recipient?.company || 'Musterfirma')}</p>
           </div>
-          <div class="flex items-center space-x-2 shrink-0">
-            <select onchange="updateHistoryStatus(${Number(item.id)}, this.value)" class="text-xs px-2 py-1 rounded-lg border border-slate-300 bg-white text-slate-700">
-              ${statusOptions}
-            </select>
-            <button onclick="loadHistoryItem(${Number(item.id)}, false)" class="px-3 py-1 bg-blue-50 text-blue-600 rounded-lg text-xs font-medium hover:bg-blue-100">Öffnen</button>
-            <button onclick="loadHistoryItem(${Number(item.id)}, true)" title="Als Kopie öffnen" class="px-2.5 py-1 bg-slate-200/70 text-slate-700 rounded-lg text-xs font-medium hover:bg-slate-200">Kopie</button>
-            <button onclick="deleteHistoryItem(${Number(item.id)})" class="text-slate-400 hover:text-red-500 p-1"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+          <div class="flex items-center space-x-1.5 shrink-0">
+            <button onclick="loadHistoryItem(${Number(item.id)})" class="px-2.5 py-1 bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 rounded-lg text-xs font-semibold border border-blue-500/20">Öffnen</button>
+            <button onclick="deleteHistoryItem(${Number(item.id)})" class="p-1 text-slate-500 hover:text-red-400" aria-label="Löschen" title="Löschen"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
           </div>
         </div>
-      `;
-      }).join('');
+      `).join('');
       lucide.createIcons();
     }
 
-    function loadHistoryItem(id, asCopy = false) {
+    function loadHistoryItem(id) {
       const list = JSON.parse(localStorage.getItem('saved_letters') || '[]');
       const found = list.find(x => x.id === id);
       if (found) {
-        document.getElementById('preview-subject').textContent = asCopy ? `${found.subject} (Kopie)` : found.subject;
+        document.getElementById('preview-subject').textContent = found.subject;
         document.getElementById('preview-body').innerHTML = found.body;
         if (found.recipient) {
           if (found.recipient.company) document.getElementById('preview-recipient-company').textContent = found.recipient.company;
@@ -1759,14 +1532,8 @@ ${fn} ${ln}`;
           if (found.recipient.address) document.getElementById('preview-recipient-address').textContent = found.recipient.address;
           if (found.recipient.city) document.getElementById('preview-recipient-city').textContent = found.recipient.city;
         }
-        currentLetterStatus = asCopy ? 'Entwurf' : (found.status || 'Entwurf');
-        if (Array.isArray(found.attachments)) {
-          attachmentsList = found.attachments.map(x => String(x).trim()).filter(Boolean);
-          editingAttachmentIndex = -1;
-          persistAttachments();
-          renderAttachments();
-        }
         switchTab('editor');
+        setEditorStep(4);
       }
     }
 
@@ -1778,7 +1545,7 @@ ${fn} ${ln}`;
       showToast('Anschreiben gelöscht.', 'info');
     }
 
-    // Init
+    // Init & PWA Service Worker
     window.addEventListener('DOMContentLoaded', () => {
       document.getElementById('preview-date').textContent = new Date().toLocaleDateString('de-DE', {
         day: 'numeric',
@@ -1786,14 +1553,22 @@ ${fn} ${ln}`;
         year: 'numeric'
       });
       loadProfile();
-      loadAttachments();
       renderVaultDocuments();
       renderHistory();
-      setWizardStep(1);
+      setEditorStep(1);
       switchTab('home');
+
       if (getApiKey()) {
-        document.getElementById('api-status-text').textContent = 'KI-Modus: Eigener Key';
+        document.getElementById('api-status-text').textContent = 'KI: Eigener Key';
       }
+
+      // PWA Service Worker Registration
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js').catch(err => {
+          console.warn('SW registration skipped:', err);
+        });
+      }
+
       lucide.createIcons();
     });
   </script>
