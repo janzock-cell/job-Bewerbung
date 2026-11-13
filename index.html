@@ -69,7 +69,10 @@
 
       <!-- Navigation Tabs -->
       <nav class="hidden md:flex items-center space-x-1">
-        <button onclick="switchTab('create')" id="nav-create" class="px-3.5 py-2 rounded-lg text-sm font-medium text-blue-600 bg-blue-50 flex items-center gap-1.5 transition">
+        <button onclick="switchTab('home')" id="nav-home" class="px-3.5 py-2 rounded-lg text-sm font-medium text-blue-600 bg-blue-50 flex items-center gap-1.5 transition">
+          <i data-lucide="layout-grid" class="w-4 h-4"></i> Übersicht
+        </button>
+        <button onclick="switchTab('create')" id="nav-create" class="px-3.5 py-2 rounded-lg text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 flex items-center gap-1.5 transition">
           <i data-lucide="pen-tool" class="w-4 h-4"></i> Generator
         </button>
         <button onclick="switchTab('editor')" id="nav-editor" class="px-3.5 py-2 rounded-lg text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 flex items-center gap-1.5 transition">
@@ -94,7 +97,10 @@
 
     <!-- Mobile Nav Bar -->
     <div class="md:hidden flex border-t border-slate-200 px-2 py-1 justify-around bg-white">
-      <button onclick="switchTab('create')" id="mob-create" class="flex-1 py-1.5 text-center text-xs font-medium text-blue-600 flex flex-col items-center">
+      <button onclick="switchTab('home')" id="mob-home" class="flex-1 py-1.5 text-center text-xs font-medium text-blue-600 flex flex-col items-center">
+        <i data-lucide="layout-grid" class="w-4 h-4 mb-0.5"></i> Übersicht
+      </button>
+      <button onclick="switchTab('create')" id="mob-create" class="flex-1 py-1.5 text-center text-xs font-medium text-slate-600 flex flex-col items-center">
         <i data-lucide="pen-tool" class="w-4 h-4 mb-0.5"></i> Generator
       </button>
       <button onclick="switchTab('editor')" id="mob-editor" class="flex-1 py-1.5 text-center text-xs font-medium text-slate-600 flex flex-col items-center">
@@ -112,8 +118,74 @@
   <!-- Main Content Container -->
   <main class="flex-1 max-w-6xl w-full mx-auto p-4 md:p-6">
 
+    <!-- TAB 0: HOME DASHBOARD (Android AI Studio Design) -->
+    <section id="tab-home" class="max-w-2xl mx-auto space-y-6">
+      <!-- Hero Banner Card -->
+      <div class="relative rounded-3xl overflow-hidden shadow-xl aspect-[16/9] sm:aspect-[21/9] flex items-end">
+        <img src="hero_banner.jpg" alt="Bewerbungs-Helfer Arbeitsplatz" class="absolute inset-0 w-full h-full object-cover">
+        <div class="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/45 to-slate-950/20"></div>
+        <div class="relative z-10 p-6 sm:p-8 text-white">
+          <p class="text-sm sm:text-base font-medium text-slate-200">Willkommen beim</p>
+          <h1 class="text-2xl sm:text-3xl font-black tracking-tight text-white mt-0.5">Bewerbungs-Helfer</h1>
+        </div>
+      </div>
+
+      <!-- 2x2 Grid Menü (Material 3 Cards aus HomeScreen.kt) -->
+      <div class="grid grid-cols-2 gap-4">
+        <!-- Card 1: 1. Daten-Tresor -->
+        <button type="button" onclick="switchTab('profile')" class="group text-left p-5 sm:p-6 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white shadow-lg transition-all transform hover:-translate-y-0.5 flex flex-col justify-between aspect-square border border-slate-800/80">
+          <div class="w-12 h-12 rounded-xl bg-slate-800 group-hover:bg-blue-600/30 text-blue-400 flex items-center justify-center transition">
+            <i data-lucide="folder-lock" class="w-6 h-6"></i>
+          </div>
+          <div>
+            <h2 class="text-sm sm:text-base font-bold text-white">1. Daten-Tresor</h2>
+            <p class="text-xs text-slate-400 mt-1 leading-snug">Schritt 1: Profil, Fotos &amp; PDFs festhalten</p>
+          </div>
+        </button>
+
+        <!-- Card 2: Notizen-Scan -->
+        <button type="button" onclick="openScanDirectly()" class="group text-left p-5 sm:p-6 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white shadow-lg transition-all transform hover:-translate-y-0.5 flex flex-col justify-between aspect-square border border-slate-800/80">
+          <div class="w-12 h-12 rounded-xl bg-slate-800 group-hover:bg-indigo-600/30 text-indigo-400 flex items-center justify-center transition">
+            <i data-lucide="scan-text" class="w-6 h-6"></i>
+          </div>
+          <div>
+            <h2 class="text-sm sm:text-base font-bold text-white">Notizen-Scan</h2>
+            <p class="text-xs text-slate-400 mt-1 leading-snug">Handschriftliche Notizen digitalisieren</p>
+          </div>
+        </button>
+
+        <!-- Card 3: 2. Anschreiben -->
+        <button type="button" onclick="openGeneratorDirectly()" class="group text-left p-5 sm:p-6 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white shadow-lg transition-all transform hover:-translate-y-0.5 flex flex-col justify-between aspect-square border border-slate-800/80">
+          <div class="w-12 h-12 rounded-xl bg-slate-800 group-hover:bg-emerald-600/30 text-emerald-400 flex items-center justify-center transition">
+            <i data-lucide="file-plus" class="w-6 h-6"></i>
+          </div>
+          <div>
+            <h2 class="text-sm sm:text-base font-bold text-white">2. Anschreiben</h2>
+            <p class="text-xs text-slate-400 mt-1 leading-snug">Schritt 2: KI-Anschreiben erstellen</p>
+          </div>
+        </button>
+
+        <!-- Card 4: Verlauf -->
+        <button type="button" onclick="switchTab('history')" class="group text-left p-5 sm:p-6 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white shadow-lg transition-all transform hover:-translate-y-0.5 flex flex-col justify-between aspect-square border border-slate-800/80">
+          <div class="w-12 h-12 rounded-xl bg-slate-800 group-hover:bg-amber-600/30 text-amber-400 flex items-center justify-center transition">
+            <i data-lucide="history" class="w-6 h-6"></i>
+          </div>
+          <div>
+            <h2 class="text-sm sm:text-base font-bold text-white">Verlauf</h2>
+            <p class="text-xs text-slate-400 mt-1 leading-snug">Deine bisherigen Anschreiben</p>
+          </div>
+        </button>
+      </div>
+    </section>
+
     <!-- TAB 1: GENERATOR / CREATE -->
-    <section id="tab-create" class="space-y-6">
+    <section id="tab-create" class="hidden space-y-6">
+      <div class="flex items-center justify-between no-print">
+        <button type="button" onclick="switchTab('home')" class="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 px-3 py-1.5 rounded-lg bg-white border border-slate-200 hover:bg-slate-50 transition">
+          <i data-lucide="arrow-left" class="w-4 h-4"></i>
+          <span>Zurück zur Übersicht</span>
+        </button>
+      </div>
 
       <!-- Hero Banner Card -->
       <div class="bg-gradient-to-r from-blue-700 via-indigo-700 to-blue-800 rounded-2xl p-6 md:p-8 text-white shadow-xl shadow-blue-900/10 relative overflow-hidden">
@@ -140,7 +212,7 @@
               <span id="wizard-progress-text" class="text-slate-500 font-medium">33 %</span>
             </div>
             <div class="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-              <div id="wizard-progress-bar" class="h-full bg-gradient-to-r from-blue-600 to-indigo-600 rounded-full transition-all duration-300" style="width: 33.33%"></div>
+              <div id="wizard-progress-bar" class="h-full w-1/3 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-full transition-all duration-300"></div>
             </div>
             <div class="grid grid-cols-3 gap-2 pt-1">
               <button type="button" onclick="setWizardStep(1)" id="wiz-chip-1" class="px-2.5 py-2 rounded-lg text-xs font-semibold border bg-blue-50 text-blue-700 border-blue-200 flex items-center justify-center gap-1.5 transition">
@@ -349,6 +421,12 @@
 
     <!-- TAB 2: EDITOR & DIN A4 VORSCHAU -->
     <section id="tab-editor" class="hidden space-y-6">
+      <div class="flex items-center justify-between no-print">
+        <button type="button" onclick="switchTab('home')" class="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 px-3 py-1.5 rounded-lg bg-white border border-slate-200 hover:bg-slate-50 transition">
+          <i data-lucide="arrow-left" class="w-4 h-4"></i>
+          <span>Zurück zur Übersicht</span>
+        </button>
+      </div>
 
       <!-- Action Toolbar -->
       <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm flex flex-wrap items-center justify-between gap-3 no-print">
@@ -472,6 +550,12 @@
 
     <!-- TAB 3: 1. DATEN-TRESOR & BENUTZERPROFIL -->
     <section id="tab-profile" class="hidden space-y-6 max-w-3xl mx-auto">
+      <div class="flex items-center justify-between no-print">
+        <button type="button" onclick="switchTab('home')" class="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 px-3 py-1.5 rounded-lg bg-white border border-slate-200 hover:bg-slate-50 transition">
+          <i data-lucide="arrow-left" class="w-4 h-4"></i>
+          <span>Zurück zur Übersicht</span>
+        </button>
+      </div>
 
       <!-- Schritt 1: Smart-Import & Dokumenten-Tresor -->
       <div class="bg-white rounded-xl border border-blue-200/80 p-6 shadow-sm space-y-4">
@@ -607,6 +691,13 @@
 
     <!-- TAB 4: GESPEICHERTE ANSCHREIBEN (ARCHIV) -->
     <section id="tab-history" class="hidden space-y-4 max-w-4xl mx-auto">
+      <div class="flex items-center justify-between no-print">
+        <button type="button" onclick="switchTab('home')" class="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 px-3 py-1.5 rounded-lg bg-white border border-slate-200 hover:bg-slate-50 transition">
+          <i data-lucide="arrow-left" class="w-4 h-4"></i>
+          <span>Zurück zur Übersicht</span>
+        </button>
+      </div>
+
       <div class="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
         <div class="flex items-center justify-between mb-4">
           <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
@@ -629,7 +720,7 @@
     <div class="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
       <p>© 2026 Bewerbungs-Helfer • Optimiert für Web & Android</p>
       <div class="flex items-center gap-4 text-slate-600">
-        <a href="https://github.com/janzock-cell/Sabo-Bewerbung-" target="_blank" rel="noopener noreferrer" class="hover:text-blue-600 flex items-center gap-1">
+        <a href="https://github.com/janzock-cell/job-Bewerbung" target="_blank" rel="noopener noreferrer" class="hover:text-blue-600 flex items-center gap-1">
           <i data-lucide="github" class="w-4 h-4"></i> GitHub Repository
         </a>
       </div>
@@ -696,7 +787,7 @@
 
     // Tab Switching
     function switchTab(tabId) {
-      ['create', 'editor', 'profile', 'history'].forEach(tab => {
+      ['home', 'create', 'editor', 'profile', 'history'].forEach(tab => {
         const el = document.getElementById('tab-' + tab);
         const navEl = document.getElementById('nav-' + tab);
         const mobEl = document.getElementById('mob-' + tab);
@@ -712,7 +803,18 @@
             : 'flex-1 py-1.5 text-center text-xs font-medium text-slate-600 flex flex-col items-center';
         }
       });
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       lucide.createIcons();
+    }
+
+    function openScanDirectly() {
+      switchTab('create');
+      setWizardStep(2);
+    }
+
+    function openGeneratorDirectly() {
+      switchTab('create');
+      setWizardStep(1);
     }
 
     let currentWizardStep = 1;
@@ -723,14 +825,17 @@
         2: 'Schritt 2 von 3: Notizen / Scan',
         3: 'Schritt 3 von 3: KI-Generierung'
       };
-      const pct = currentWizardStep === 1 ? '33.33%' : (currentWizardStep === 2 ? '66.66%' : '100%');
       const pctText = currentWizardStep === 1 ? '33 %' : (currentWizardStep === 2 ? '66 %' : '100 %');
+      const widthClass = currentWizardStep === 1 ? 'w-1/3' : (currentWizardStep === 2 ? 'w-2/3' : 'w-full');
 
       const labelEl = document.getElementById('wizard-step-label');
       const barEl = document.getElementById('wizard-progress-bar');
       const pctEl = document.getElementById('wizard-progress-text');
       if (labelEl) labelEl.textContent = labels[currentWizardStep];
-      if (barEl) barEl.style.width = pct;
+      if (barEl) {
+        barEl.classList.remove('w-1/3', 'w-2/3', 'w-full');
+        barEl.classList.add(widthClass);
+      }
       if (pctEl) pctEl.textContent = pctText;
 
       [1, 2, 3].forEach(idx => {
@@ -1685,6 +1790,7 @@ ${fn} ${ln}`;
       renderVaultDocuments();
       renderHistory();
       setWizardStep(1);
+      switchTab('home');
       if (getApiKey()) {
         document.getElementById('api-status-text').textContent = 'KI-Modus: Eigener Key';
       }
