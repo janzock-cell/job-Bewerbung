@@ -6,6 +6,7 @@
   <title>Bewerbungs-Helfer | Professionelle KI-Anschreiben</title>
   <meta name="description" content="Erstelle professionelle DIN 5008 Anschreiben aus handschriftlichen Notizen und deinem Profil mithilfe von KI.">
   <link rel="icon" type="image/png" href="app/src/main/res/drawable/app_icon_foreground.png">
+  <link rel="apple-touch-icon" href="app/src/main/res/drawable/app_icon_foreground.png">
   <link rel="manifest" href="manifest.webmanifest">
   <meta name="theme-color" content="#0a0e17">
 
@@ -256,7 +257,7 @@
         </div>
 
         <!-- Hidden File Inputs -->
-        <input type="file" id="vault-camera-input" accept="image/*" capture="environment" class="hidden" onchange="handleVaultUpload(event, 'Kamera')" aria-label="Kamera-Foto aufnehmen" title="Kamera-Foto aufnehmen">
+        <input type="file" id="vault-camera-input" accept="image/*" class="hidden" onchange="handleVaultUpload(event, 'Kamera')" aria-label="Kamera-Foto aufnehmen" title="Kamera-Foto aufnehmen">
         <input type="file" id="vault-photo-input" accept="image/*" class="hidden" onchange="handleVaultUpload(event, 'Foto')" aria-label="Bild aus Galerie auswählen" title="Bild aus Galerie auswählen">
         <input type="file" id="vault-file-input" accept=".pdf,.txt,.md,text/plain" class="hidden" onchange="handleVaultUpload(event, 'PDF/Datei')" aria-label="PDF oder Textdatei hochladen" title="PDF oder Textdatei hochladen">
 
@@ -436,7 +437,7 @@
       </div>
 
       <!-- Hidden Scan Inputs -->
-      <input type="file" id="scan-camera-input" accept="image/*" capture="environment" class="hidden" onchange="handleImageOcr(event)" aria-label="Notiz-Foto aufnehmen" title="Notiz-Foto aufnehmen">
+      <input type="file" id="scan-camera-input" accept="image/*" class="hidden" onchange="handleImageOcr(event)" aria-label="Notiz-Foto aufnehmen" title="Notiz-Foto aufnehmen">
       <input type="file" id="scan-gallery-input" accept="image/*" class="hidden" onchange="handleImageOcr(event)" aria-label="Notiz-Bild auswählen" title="Notiz-Bild auswählen">
 
       <!-- OCR Status Box -->
